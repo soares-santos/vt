@@ -1,0 +1,25 @@
+#!/bin/bash
+
+if [ "$#" -ne 1 ]; then echo "Usage: $0 <glxcat> "; exit; fi
+
+glxcat=`echo $1 | awk -F ".fit" '{print $1}'`
+
+cp $1 $glxcat
+if [ ! -f $glxcat.candidates_match_table.fit ] ; then findclusters.sh $glxcat ; fi
+if [ ! -f $glxcat.clusters.fit ] ; then cleancat.sh $glxcat ; fi
+
+
+source params.info
+
+# some functionality is not implemented for "grid" environment  
+if [ "$VT_RUN_ENVIRONMENT" = "cluster" ] 
+then
+    if [ ! -f truth_$1 ] ; then exit ; fi
+    if [ ! "$SETUP_PYTHON" = "python v2_6_4 -f Linux+2 -z /sdss/ups/db" ]
+    then echo "python v2_6_4 is not setup." ; exit ; fi 
+    matchscript.py truth_$1 $glxcat.clusters.fit
+    echo `date`
+fi
+
+exit
+
