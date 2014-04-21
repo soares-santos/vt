@@ -1,0 +1,10 @@
+RA=RA
+DEC=DEC
+Z=REDSHIFT
+ID=ID
+rcl=0.95
+buff=1.0
+err_z=0.015
+w=1.5
+boost=2.0
+VT_RUN_ENVIRONMENT=cluster
