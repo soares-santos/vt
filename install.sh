@@ -134,6 +134,14 @@ if (( $REINSTALL == 0 )) ; then
 	cd - >> /dev/null 2>&1
     fi
 fi
+rm -f utils/*/Makefile
+rm -f utils/*/config.status
+rm -f utils/*/config.log
+rm -f utils/*/*.pc
+rm -f utils/*/conf.h
+rm -f utils/funtools/*/Makefile
+rm -f utils/funtools/*/config.status
+rm -f utils/funtools/*/conf.h
 
 if (( $VERBOSE )) ; then echo "== make vt ==" ; fi
 cd src
