@@ -8,7 +8,8 @@
 
 # SRC is the dir containing the source files, BIN will contain the executables.
 
-SRC =$(VT_DIR)/src/
+#SRC =$(VT_DIR)/src/
+SRC =./
 BIN =$(VT_DIR)/bin/
 
 # CC should be set to the name of your favorite C compiler.
