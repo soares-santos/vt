@@ -53,7 +53,7 @@ while getopts ":hoqr" opt; do
     esac
 done
 
-if [ $nargs -eq 0 ]; then 
+if [ "$nargs" -eq 0 ]; then 
     TARGET_DIR=`pwd`
 else
     TARGET_DIR="${@: -1}" 
@@ -62,22 +62,25 @@ fi
 	    
 if (( $VERBOSE )) ; then 
     echo "== set parameters == "
-    echo "This are your install.sh parameters: 
-TARGET_DIR = $TARGET_DIR
-VERBOSE = $VERBOSE
-OVERWRITE = $OVERWRITE"
+    echo " ...... This are your install.sh parameters: 
+        TARGET_DIR = $TARGET_DIR
+        VERBOSE = $VERBOSE
+        OVERWRITE = $OVERWRITE
+        REINSTALL = $REINSTALL"
 fi
 
-dir=$TARGET_DIR/vt-prod
+dir=$TARGET_DIR/vt
 export VT_DIR=$dir
 if (( $VERBOSE )) ; then echo "== create dir $dir  ==" ; fi
-if [ -d $dir ]; then 
+if [ -d "$dir" ]; then 
     if (( $REINSTALL )) ; then
 	if (( $VERBOSE )) ; then echo " ...... $dir already exists. Reinstall vt here." ; fi
     else
 	if (( $OVERWRITE )) ; then
 	    if (( $VERBOSE )) ; then echo " ...... overwriting previous vt installation." ; fi
 	    rm -rf $dir || exit 1
+	    mkdir $dir 
+	    mkdir $dir/bin
 	else
 	    echo " Error: Directory $dir already exists."
 	    echo "        Use option -o to overwrite $dir and ALL its contents."
@@ -90,33 +93,56 @@ else
     mkdir $dir/bin
 fi
 
+INSTALL_LOG=$dir/install.log
+rm -rf $INSTALL_LOG 
+touch $INSTALL_LOG
+if (( $VERBOSE )) ; then 
+    echo "== perform installation  ==" 
+    echo " ...... This is your install logfile:"
+    echo "        INSTALL_LOG=$INSTALL_LOG"
+fi
+
 if (( $REINSTALL == 0 )) ; then
-    if [ -d $CFITSIO_DIR ] ; then 
+    if [ -d "$CFITSIO_DIR" ] ; then 
 	if (( $VERBOSE )) ; then echo "== using cfitsio found in $CFITSIO_DIR ==" ; fi
     else
 	if (( $VERBOSE )) ; then echo "== make cfitsio library ==" ; fi
 	cd utils/cfitsio
-	./configure --prefix=$dir 
-	make 
-	make install || exit 1
-	cd -
+	./configure --prefix=$dir >> $INSTALL_LOG 2>&1
+	make >> $INSTALL_LOG 2>&1
+	make install >> $INSTALL_LOG 2>&1
+	make clean >> $INSTALL_LOG 2>&1
+	if [ ! -f "$dir/lib/libcfitsio.a" ]; then  
+	    echo "Error: libcifitsio.a not found. Did cfitsio install fail?"
+	    exit 1
+	fi
+	cd - >> /dev/null 2>&1
     fi
-    if [ -d $FUNTOOLS_DIR ] ; then
+    if [ -d "$FUNTOOLS_DIR" ] ; then
 	if (( $VERBOSE )) ; then echo "== using funtools found in $FUNTOOLS_DIR ==" ; fi
     else	    
 	if (( $VERBOSE )) ; then  echo "== make funtools library ==" ; fi
 	cd utils/funtools
-	./configure --prefix=$dir 
-	make 
-	make install || exit 1
-	cd -
+	./configure --prefix=$dir >> $INSTALL_LOG 2>&1
+	make >> $INSTALL_LOG 2>&1
+	make install >> $INSTALL_LOG 2>&1
+	make clean >> $INSTALL_LOG 2>&1
+	if [ ! -f "$dir/lib/libfuntools.a" ]; then  
+	    echo "Error: libfuntools.a not found. Did funtools install fail?"
+	    exit 1
+	fi
+	cd - >> /dev/null 2>&1
     fi
 fi
 
 if (( $VERBOSE )) ; then echo "== make vt ==" ; fi
 cd src
-make || exit 1
-cd -
+make >> $INSTALL_LOG 2>&1
+if [ ! -f "$dir/bin/fitscopy" ]; then  
+    echo "Error: vtfind command not found. Did vt install fail?"
+    exit 1
+fi
+cd - >> /dev/null 2>&1
 cp setup-vt.sh $dir
 sed -i "s|\`pwd\`|$VT_DIR|" $dir/setup-vt.sh
 cp -r example $dir
@@ -124,3 +150,4 @@ cp README $dir
 
 if (( $VERBOSE )) ; then echo "== install complete ==" ; fi
 
+exit 0
