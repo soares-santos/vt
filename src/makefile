@@ -56,6 +56,7 @@ all: $(BIN)vt
 	cp $(SRC)matchscript.sh $(BIN)matchscript.sh
 	cp $(SRC)vtfind $(BIN)vtfind
 	cp $(SRC)rankclusters.sh $(BIN)rankclusters.sh
+	$(RM) $(BIN)*.o
 
 $(BIN)vt: $(BIN)nr.o $(BIN)triangle.o $(BIN)voronoi.o $(SRC)vt.c
 	$(CC) $(CSWITHCES) -o $(BIN)vt $(BIN)nr.o $(BIN)nrutil.o $(BIN)triangle.o $(BIN)voronoi.o $(SRC)vt.c $(INC) $(LIB)
