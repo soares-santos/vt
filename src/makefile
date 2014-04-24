@@ -57,6 +57,7 @@ all: $(BIN)vt
 	cp $(SRC)vtfind $(BIN)vtfind
 	cp $(SRC)rankclusters.sh $(BIN)rankclusters.sh
 	$(RM) $(BIN)*.o
+	cp $(SRC)*.h $(VT_DIR)/include
 
 $(BIN)vt: $(BIN)nr.o $(BIN)triangle.o $(BIN)voronoi.o $(SRC)vt.c
 	$(CC) $(CSWITHCES) -o $(BIN)vt $(BIN)nr.o $(BIN)nrutil.o $(BIN)triangle.o $(BIN)voronoi.o $(SRC)vt.c $(INC) $(LIB)
