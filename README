@@ -9,10 +9,11 @@ Soares-Santos et al., ApJ 727, 45, 2011.
 
 DOWNLOAD
 
-	For the latest development version:
-	Email marcelle@fnal.gov to gain access and then use:
+	Latest release:
+	https://bitbucket.org/marcelle/vt/downloads/vt-1.10.tar.gz	
+	Latest development version:
 	git clone https://marcelle@bitbucket.org/marcelle/vt.git
-
+	
 INSTALL
 
 	cd vt 
