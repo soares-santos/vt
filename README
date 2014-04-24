@@ -1,1 +1,167 @@
-# vt detects galaxy clusters in sky survey data.
+Voronoi Tessellations Cluster Finder in 2+1 Dimensions
+
+The vt software detects galaxy clusters in sky survey data.
+From an input catalog of galaxies, vt will produce a 
+catalog of clusters and a list of their members.
+A detailed algorithm description and performance study 
+for the vt cluster finder is presented in: 
+Soares-Santos et al., ApJ 727, 45, 2011.
+
+DOWNLOAD
+
+	For the latest development version:
+	Email marcelle@fnal.gov to gain access and then use:
+	git clone https://marcelle@bitbucket.org/marcelle/vt.git
+
+INSTALL
+
+	cd vt 
+	./install.sh <target_dir>
+	source <target_dir>/vt/setup-vt.sh
+
+INPUT FILES 
+
+	<galaxy_cat>.fit
+	boxes.info
+	params.info                    (optional)
+	mfit_params.txt                (*)
+	<galaxy_cat>_truthtable.fit    (*)
+
+RUN
+
+	vtfind <galaxy_cat>.fit
+
+OUTPUT FILES
+
+	<galaxy_cat>.run1/
+	<galaxy_cat>.candidates.fit
+	<galaxy_cat>.membercand.fit
+	<galaxy_cat>.run2/
+	<galaxy_cat>.candidates.run2.fit
+	<galaxy_cat>.membercand.run2.fit
+	<galaxy_cat>.candidates_match_table.fit
+	<galaxy_cat>.clustercat.fit   
+	<galaxy_cat>.memberscat.fit
+	<galaxy_cat>.clusters.fit
+	matched.<galaxy_cat>.clusters.fit
+	pur_comp_matched.<galaxy_cat>.clusters.fit.png
+	scatter_nonunique_matched.<galaxy_cat>.clusters.fit.png
+	scatter_unique_matched.<galaxy_cat>.clusters.fit.png
+
+(*) Needed only if computing the Completeness and Purity 
+functions from mock catalogs. 
+
+FORMAT OF INPUT FILES
+
+params.info 
+	This is a piece of bash script that -- if found -- 
+	will be sourced by the main vt script. 
+	Use this file to overwrite some of 
+	the default parameter values as needed. Defaults are:
+	RA=RA           	# RA colname	
+	DEC=DEC         	# DEC colname 
+	Z=REDSHIFT      	# Z colname 
+	ID=ID           	# ID colname
+	rcl=0.95        	# min confidence level
+	buff=1.0        	# length of buffer region
+	err_z=0.03      	# err_z/(1+z)
+	w=1.5           	# window size on 2nd run
+	boost=2.0       	# boost factor
+	VT_RUN_ENVIRONMENT=grid # grid, cluster or local run?	
+
+<galaxy_cat>.fit
+	The input galaxy catalog is a fits file containing at 
+	least the columns "ID RA DEC Z", in any order. 
+	Extra columns are ignored. If column names are different, 
+	modify the params.info file accordingly.
+
+boxes.info 
+	This ascii file lists the boundaries of the effective 
+	boxes to be processed and the 2pt correlation function 
+	parameters within each box. Cluster IDs in each box
+	will be assigned counting up from the boxID number, so
+	to make sure that your clusters have unique IDs, set the
+	boxIDs to numbers very far from each other.
+	Example:	
+	# boxID ramin ramax decmin decmax zmin zmax A gamma
+	120000 1.0 2.0 1.0 2.0 0.045 0.139 0.00753 1.674
+	130000 1.0 2.0 1.0 2.0 0.139 0.241 0.00396 1.676
+	140000 1.0 2.0 1.0 2.0 0.241 0.353 0.00291 1.805
+
+mfit_params.txt
+	This file lists the parameters of the rank(M) formula
+	rank = (M/Mpow)^alpha * Exp(Exp(-(M-m0)/Mexp) - M/m1)
+	in each redshift bin used in the Completeness and 
+	Purity calculation (these are hard coded and have 
+	nothing to do with the shells used in the finding). 
+	You need this only if computing Completess and Purity.
+	from mock catalogs. Example:
+	# zmin zmax Mexp Mpow alpha m0 m1
+	0.00    0.10    9.74e14 3.07e4  0.222   -3.26e16   5.78e13
+	0.10    0.30    9.74e14 3.07e4  0.222   -3.26e16   5.78e13
+	0.30    0.40    9.74e14 3.07e4  0.222   -3.26e16   5.78e13
+	0.40    0.60    9.74e14 3.07e4  0.222   -3.26e16   5.78e13
+	0.60    0.70    9.74e14 3.07e4  0.222   -3.26e16   5.78e13
+	0.70    0.90    9.74e14 3.07e4  0.222   -3.26e16   5.78e13
+	0.90    1.10    9.74e14 3.07e4  0.222   -3.26e16   5.78e13
+	1.10    1.30    9.74e14 3.07e4  0.222   -3.26e16   5.78e13
+	1.30    1.50    9.74e14 3.07e4  0.222   -3.26e16   5.78e13
+
+truth_<galaxy_cat>.fit
+	This is a fits file with 2 HDUs containing the true halos 
+	used as reference to compute the Completeness and
+	Purity. In HDU 1, we have RANK RA DEC Z M200 for the 
+	halos. In HDU 2, we have ID RANK for the halo members.
+	In this file, only halo members within R200 are included.
+	The Mass M200 is in unities of M_sun/h. The clusters are
+	ranked by mass, so that cluster 1 is the most massive,
+	cluster 2 is the 2nd most massive, etc. The RANK must be
+	unique and works as the ID of the halo. The ID of the 
+	galaxies also must be unique.    
+	
+DESCRIPTION OF OUTPUT FILES
+
+<galaxy_cat>.run1/
+	Directory containing the run1 results for each box. 
+
+<galaxy_cat>.candidates.fit	
+<galaxy_cat>.membercand.fit
+	Complete run1 cluster catalog. 
+
+<galaxy_cat>.run2/
+	Directory keeping the run2 boxes.
+
+<galaxy_cat>.candidates.run2.fit
+<galaxy_cat>.membercand.run2.fit
+	Complete run2 catalog.
+
+<galaxy_cat>.candidates_match_table.fit
+	run1-run2 matching results.
+
+<galaxy_cat>.clustercat.fit   
+<galaxy_cat>.memberscat.fit
+	The final cluster catalog. 
+
+<galaxy_cat>.clusters.fit
+	The final cluster catalog in the format needed 
+	for the Completeness/Purity code.
+
+matched.<galaxy_cat>.clusters.fit
+	Results of the matching against the truth table. 
+	Completeness and Purity values obtained. 
+
+pur_comp_matched.<galaxy_cat>.clusters.fit.png
+	Purity and Completeness plots as a funcition of
+	Mass in all redshift bins.
+
+scatter_nonunique_matched.<galaxy_cat>.clusters.fit.png
+scatter_unique_matched.<galaxy_cat>.clusters.fit.png
+	Plots showing the Mtrue-Mobs scatter diagram
+	for both the unique and non-unique cases in 
+	all redshift bins.
+
+CONTACT INFO
+
+Marcelle Soares-Santos
+marcelle@fnal.gov
+Fermi National Accelerator Laboratory
