@@ -7,15 +7,14 @@
 
 if (( $VERBOSE )) ; then echo " == set environment for vt runs ==" ; fi
 
-dir=`pwd`
-CURRENT_PATH=$PATH
-UNSETUP_SCRIPT="$dir/unsetup-vt.sh"
-
-export VT_DIR="$dir/vt"
+export VT_DIR=`pwd`
 if (( $VERBOSE )) ; then echo " ...... your vt working dir is: $VT_DIR" ; fi
 
+CURRENT_PATH=$PATH
+
+UNSETUP_SCRIPT="$VT_DIR/unsetup-vt.sh"
 rm -rf $UNSETUP_SCRIPT
-touch $UNSETUP_SRIPT
+touch $UNSETUP_SCRIPT
 echo "
 # This is the unsetup-vt.sh script file. 
 # Source this file to reset vt specific environment variables and 
@@ -23,6 +22,7 @@ echo "
 echo "export VT_DIR=\"\"" >> $UNSETUP_SCRIPT
 echo "export PATH=$CURRENT_PATH" >> $UNSETUP_SCRIPT 
 if (( $VERBOSE )); then echo " ...... file $UNSETUP_SCRIPT updated" ; fi
+
 
 if [[ :$PATH: == *:"$VT_DIR/bin":* ]] ; then
     if (( $VERBOSE )) ; then echo " ...... dir $VT_DIR/bin found in PATH" ; fi
