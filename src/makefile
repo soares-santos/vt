@@ -50,6 +50,7 @@ all: $(BIN)vt
 	$(CC) -o $(BIN)tabmerge $(SRC)tabmerge.c $(INC) $(LIB)
 	$(CC) -o $(BIN)liststruc $(SRC)liststruc.c $(INC) $(LIB)
 	$(CC) -o $(BIN)match_clusters $(SRC)match_clusters.c $(INC) $(LIB)
+	$(CC) -o $(BIN)zbins $(SRC)zbins.cpp -lstdc++
 	cp $(SRC)findclusters.sh $(BIN)findclusters.sh
 	cp $(SRC)cleancat.sh $(BIN)cleancat.sh
 	cp $(SRC)get_boundaries.sh $(BIN)get_boundaries.sh
@@ -74,6 +75,9 @@ $(BIN)nr.o: $(SRC)nr.c $(SRC)nr.h $(SRC)nrutil.c $(SRC)nrutil.h
 
 match: $(SRC)match_clusters.c $(SRC)voronoi.h 
 	$(CC) -o $(BIN)match_clusters $(SRC)match_clusters.c $(INC) $(LIB)
+
+zbins: $(SRC)zbins.cpp  
+	$(CC) -o $(BIN)zbins $(SRC)zbins.cpp -lstdc++
 
 scripts: $(SRC)findclusters.sh $(SRC)cleancat.sh $(SRC)get_boundaries.sh $(SRC)matchscript.sh $(SRC)vtfind
 	cp $(SRC)findclusters.sh $(BIN)findclusters.sh
