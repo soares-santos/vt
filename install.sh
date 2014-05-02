@@ -99,7 +99,7 @@ touch $INSTALL_LOG
 if (( $VERBOSE )) ; then 
     echo "== perform installation  ==" 
     echo " ...... This is your install logfile:"
-    echo "        INSTALL_LOG=$INSTALL_LOG"
+    echo "        INSTALL_LOG = $INSTALL_LOG"
 fi
 
 if (( $REINSTALL == 0 )) ; then
@@ -146,8 +146,8 @@ rm -f utils/funtools/*/conf.h
 if (( $VERBOSE )) ; then echo "== make vt ==" ; fi
 cd src
 make >> $INSTALL_LOG 2>&1
-if [ ! -f "$dir/bin/fitscopy" ]; then  
-    echo "Error: vtfind command not found. Did vt install fail?"
+if [ ! -f "$dir/bin/vt" ]; then  
+    echo "Error: vt install failed."
     exit 1
 fi
 cd - >> /dev/null 2>&1
