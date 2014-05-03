@@ -44,7 +44,7 @@ Inside each job directory, the script will write some files:
  data_truth.fits  Truth table, if option -t <truth_dir> is set.
  boxes.info       The layout of the vt shells for this job. 
  params.info      List of vt parameters, if -p <params_info_file> is set.  
- PREP_DONE        Empty file indicating that this dir is ready for vt run.
+ READY            File indicating that this dir is ready for vt run.
  
 Options:
 -c <col_names_string>     Set column names. Default: \"ID RA DEC Z ZERR\"
@@ -361,7 +361,9 @@ do
 	    if (( $VERBOSE )) ; then echo "    ... create truth table" ; fi
 	fi
 	# add READY file
-	echo -e "Job created by script $0 \nusing data from dir $INPUT_DIR" >> $TARGET_DIR/$REGION/READY	    
+	rm -f $TARGET_DIR/$REGION/READY	&& touch $TARGET_DIR/$REGION/READY
+	date >> $TARGET_DIR/$REGION/READY  
+	echo -e "Job created by script $0 \nUsing data from dir $INPUT_DIR" >> $TARGET_DIR/$REGION/READY	    
 	if (( $VERBOSE )) ; then echo "    ... job is ready" ; fi
     done
 done
