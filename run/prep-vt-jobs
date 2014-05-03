@@ -1,0 +1,379 @@
+#!/bin/bash
+
+print_help() {
+    echo "
+Usage: 
+$0 [-c <col_names_string>] [-e <ext_number>] [-o] [-p <params_info_file>]
+[-q] [-r <area_range_string>] [-s <sigma_z>] [-t <truth_dir>] <input_dir> 
+<target_dir> 
+
+$0 will prepare the data for your vt cluster finder run.
+
+<input_dir> must contain your input galaxy catalog, which maybe split 
+into multiple files as long as the galaxy IDs are unique across files and 
+the column names are all the same. 
+
+<target_dir> is where your vt job subdirs will be created. To overwrite
+an existing <target_dir>, use option -o.
+
+Use option -r \"RAMIN RAMAX DECMIN DECMAX\" to restrict the region of
+the sky where you will run the vt code. Without this option, this script
+will create boxes covering the full area of the catalog. Coordinates are in 
+degrees, with RAMIN and RAMAX between 0 and 360. Please use only integer 
+values for this option. 
+
+Input galaxy catalog files are FITS binary tables.  
+By default, the data is assumed to be in Extension [1] of the input files. 
+This extension number can be changed with option -e <ext_number>.
+
+By default, the code assumes that these 5 columns are present in all
+input files: ID, RA, DEC, Z, ZERR
+These column names can be changed with option -c <col_names_string>. 
+
+When using option -c, the user may omit the ZERR column.
+This is a workaround for catalogs that do not include ZERR for each galaxy.
+In that case, the code will run assuming a global redshift 
+uncertainty value of 0.03. Use option -s to change this value.
+
+Use option -p <params_info_file> to provide a custom set of parameters for
+the vt run.
+
+The script will create subdirs for your vt jobs in the <target_dir>.
+Inside each job directory, the script will write some files: 
+ data.fits        Subset of the big input catalog to be used for this job.
+ data_truth.fits  Truth table, if option -t <truth_dir> is set.
+ boxes.info       The layout of the vt shells for this job. 
+ params.info      List of vt parameters, if -p <params_info_file> is set.  
+ PREP_DONE        Empty file indicating that this dir is ready for vt run.
+ 
+Options:
+-c <col_names_string>     Set column names. Default: \"ID RA DEC Z ZERR\"
+-e <ext_number>           Set data extension to <ext_number>. Default: 1        
+-h                        Print this help.
+-o                        Overwrite if jobs subdirs already exists. 
+-p <params_file>          Use params from <params_file>. Default: NONE
+-q                        Run this script quietly. 
+-r <area_range_string>    Area for vt run. Default: \"0 360 -90 90\"   
+-s <sigma_z>              Redshift uncertainty. Default: 0.03  
+-t <truth_dir>            Use truth tables in <truth_dir>. Default: NONE
+" 1>&2
+    exit 1
+}
+
+## set some default params 
+
+COLNAMES="ID RA DEC Z ZERR"
+ZERR_PROVIDED=1
+EXTNUM=1
+OVERWRITE=0
+NEGATIVE_RA=0
+PFILE="NONE"
+VERBOSE=1 
+AREA_RANGE=( "0" "360" "-90" "90" )
+SIGMA_Z="0.03"
+TRUTH_DIR="NONE"
+
+## parse command line options
+
+nargs="$#"
+
+while getopts ":c:e:hop:qr:s:t:" opt; do
+    case $opt in 
+	c)
+	    COLNAMES=( $OPTARG )
+	    (( nargs -=2 ))
+	    if [ "${#COLNAMES[@]}" == 4 ]; then
+		ZERR_PROVIDED=0
+	    else
+		if [ "${#COLNAMES[@]}" -ne 5 ]; then
+		    echo "Option -c is used to replace the default list of"      >&2 
+		    echo "column names that the vt will read from the input file."     >&2 
+		    echo "The list must be given in thisformat: \"ID RA DEC Z ZERR\""  >&2 
+		    exit 1
+		fi
+	    fi
+	    COLNAMES=$OPTARG
+	    ;;	    
+	e)
+	    EXTNUM=$OPTARG
+	    (( nargs -=2 ))
+	    ;;
+	h) 
+	    print_help
+	    ;;
+	o)
+	    OVERWRITE=1
+	    (( nargs -=1 ))
+	    ;;
+	p)
+	    PFILE=$OPTARG
+	    (( nargs -= 2 ))
+	    if [ ! -f "$PFILE" ]; then
+		echo "File $PFILE not found." >&2
+		exit 1
+	    fi
+	    ;;
+	q)
+	    VERBOSE=0
+	    (( nargs -=1 ))
+	    ;;	    
+	r)
+	    AREA_RANGE=( $OPTARG )
+	    (( nargs -=2 ))
+	    if [ "${#AREA_RANGE[@]}" -ne 4 ]; then
+		    echo "Option -r is used to set the area for vt runs."  >&2 
+		    echo "Format: -r \"RAMIN RAMAX DECMIN DECMAX\" "       >&2 
+		    echo "Example: -r \"10 20 -50 -35\""                   >&2 
+		    exit 1
+	    fi
+	    ;;	    
+	s)
+	    SIGMA_Z=$OPTARG
+	    (( nargs -= 2 ))
+	    ;;
+	t)
+	    TRUTH_DIR=$OPTARG
+	    (( nargs -= 2 ))
+	    if [ ! -d "$TRUTH_DIR" ]; then 
+		echo "Dir $TRUTH_DIR not found." >&2
+		exit 1
+	    fi
+	    ;;
+	:)
+	    echo "Option -$OPTARG requires an argument." >&2
+	    echo "For more info, try: $0 -h" >&2
+	    exit 1
+	    ;;
+	*) 
+	    echo "Invalid option."  
+	    echo "For more info, try: $0 -h" >&2
+	    exit 1	    
+	    ;;
+    esac
+done
+
+## parse command line params
+
+if [ "$nargs" -eq 2 ]; then
+    TARGET_DIR="${@: -1}"
+    INPUT_DIR="${@: -2:1}"
+else
+    echo "You must provide two arguments: <input_dir> <target_dir> " >&2  
+    echo "For more info, try: $0 -h" >&2
+    exit 1
+fi
+
+## check environment
+
+if [ "$VT_DIR" == "" ] ; then 
+    echo "Error: VT environment not set. " >&2 
+    echo "       Please source the setup-vt.sh script and try this again." >&2
+    exit 1
+fi
+
+## say hello and get started
+
+if (( $VERBOSE )) ; then echo "== begin script $0 ==" ; date ; fi
+
+## set a few more params
+
+if (( $VERBOSE )) ; then 
+    echo "== set parameters == "
+    echo " ...... This are your input parameters: 
+        TARGET_DIR = $TARGET_DIR
+        INPUT_DIR = $INPUT_DIR
+        TRUTH_DIR = $TRUTH_DIR
+        COLNAMES = \"$COLNAMES\"
+        EXTNUM = $EXTNUM
+        OVERWRITE = $OVERWRITE
+        PFILE = $PFILE
+        VERBOSE = $VERBOSE
+        ZERR_PROVIDED = $ZERR_PROVIDED
+        AREA_RANGE = ${AREA_RANGE[@]}
+        SIGMA_Z = $SIGMA_Z"
+fi
+
+RAMIN=${AREA_RANGE[0]}
+RAMAX=${AREA_RANGE[1]}
+DECMIN=${AREA_RANGE[2]}
+DECMAX=${AREA_RANGE[3]}
+COLS=( $COLNAMES )
+
+## check input files
+
+dir=$INPUT_DIR
+if (( $VERBOSE )) ; then echo "== check input files in dir $dir ==" ; fi
+list=`ls $dir/*.fit $dir/*.fits 2> /dev/null `
+if [ -d "$dir" ] ; then 
+    xmin=360
+    xmax=0
+    ymin=90
+    ymax=-90
+    ZMIN=1000
+    ZMAX=0
+    for FILE in $list
+    do
+	if [ "$FILE" == "" ] ; then echo "Error: Input files not found in $dir" >&2 ; exit 1 ; fi
+	funtable $FILE[$EXTNUM][row#=1] /dev/null "$COLNAMES" || exit 1
+	# check RA range
+	range=( `funhist $FILE[$EXTNUM] ${COLS[1]} 1 | tail -1 | awk '{printf "%.0f %.0f",$3,$4}'` )
+	x=${range[0]}
+	if (( x < xmin )) ; then xmin=$x ; fi
+	x=${range[1]}
+	if (( x > xmax )) ; then xmax=$x ; fi
+	# check DEC range
+	range=( `funhist $FILE[$EXTNUM] ${COLS[2]} 1 | tail -1 | awk '{printf "%.0f %.0f",$3,$4}'` )
+	x=${range[0]}
+	if (( x < ymin )) ; then ymin=$x ; fi
+	x=${range[1]}
+	if (( x > ymax )) ; then ymax=$x ; fi
+	# check z range
+	range=( `funhist $FILE[$EXTNUM] ${COLS[3]} 1 | tail -1 | awk '{printf "%.0f %.0f",$3,$4}'` )
+	x=${range[0]}
+	if (( x < ZMIN )) ; then ZMIN=$x ; fi
+	x=${range[1]}
+	if (( x > ZMAX )) ; then ZMAX=$x ; fi
+    done
+    if (( xmin < 0 )) ; then NEGATIVE_RA=1 ; (( xmin += 360 )) ; fi
+    if (( xmax < 0 )) ; then NEGATIVE_RA=1 ; (( xmax += 360 )) ; fi
+    if (( xmin > RAMIN )) ; then RAMIN=$xmin ; fi
+    if (( xmax < RAMAX )) ; then RAMAX=$xmax ; fi
+    if (( ymin > DECMIN )) ; then DECMIN=$ymin ; fi
+    if (( ymax < DECMAX )) ; then DECMAX=$ymax ; fi
+    if (( ZMIN < 0 )) ; then echo "Error: Found negative values of Z." >&2 ; exit 1 ; fi
+    ZMIN=`echo $ZMIN | awk '{printf "%u\n", $1}'`
+    ZMAX=`echo $ZMAX | awk '{printf "%u\n", $1}'`
+    if (( $VERBOSE )) ; then echo " ...... Input files seem OK." ; fi
+    if (( $VERBOSE )) ; then echo " ...... NEGATIVE_RA = $NEGATIVE_RA" ; fi
+    if (( $VERBOSE )) ; then echo " ...... AREA_RANGE = \"$RAMIN $RAMAX $DECMIN $DECMAX\"" ; fi
+    if (( $VERBOSE )) ; then echo " ...... Z_RANGE = \"$ZMIN $ZMAX\"" ; fi
+else
+    echo "Error: Dir $dir not found." >&2
+    exit 1
+fi
+
+## create target dir
+
+dir=$TARGET_DIR
+if (( $VERBOSE )) ; then echo "== create target dir $dir ==" ; fi
+if [ -d "$dir" ]; then 
+    if (( $OVERWRITE )) ; then
+	if (( $VERBOSE )) ; then echo " ...... overwriting $dir and all its contents." ; fi
+	rm -rf $dir || exit 1
+	mkdir $dir 
+	else
+	    echo " Error: Directory $dir already exists."                        >&2
+	    echo "        Use option -o to overwrite $dir and ALL its contents." >&2
+	    exit 1
+    fi
+else
+    mkdir $dir || exit 1
+    if (( $VERBOSE )) ; then echo " ...... Dir $dir created." ; fi
+fi
+
+## create zbins file
+
+if (( $VERBOSE )) ; then echo "== compute zbins ==" ; fi
+FILE=${list[0]}
+if [ "${#COLS[@]}" == 5 ]
+then  
+    if (( $VERBOSE )) ; then echo " ...... Using ZERR column to calgulate SIGMA_Z." ; fi
+    fundisp -n $FILE[$EXTNUM] "${COLS[3]} ${COLS[4]}" > $TARGET_DIR/zzerr.txt    
+else
+    if (( $VERBOSE )) ; then echo " ...... ZERR column not provided. Using SIGMA_Z = $SIGMA_Z" ; fi
+    fundisp -n $FILE[$EXTNUM] "${COLS[3]}" | awk '{print $1 "\t 0"}' > $TARGET_DIR/zzerr.txt    
+fi 
+zbins $ZMIN $ZMAX $SIGMA_Z $TARGET_DIR/zzerr.txt > $TARGET_DIR/zbins.txt
+rm $TARGET_DIR/zzerr.txt
+if (( $VERBOSE )) ; then echo " ...... created file $TARGET_DIR/zbins.txt" ; fi
+
+## create region subdirs
+
+if (( $VERBOSE )) ; then echo "== setup region subdirs in dir $TARGET_DIR ==" ; fi
+dir=`pwd`
+DATAFILE="data"
+r=`echo ${COLNAMES} | awk '{print $2}'`
+d=`echo ${COLNAMES} | awk '{print $3}'`
+OP1="[$EXTNUM][col *;$r=($r<0)?$r+360:$r]"
+line1="# boxID \t ramin \t ramax \t\t decmin\t decmax\t \t zmin \t zmax \t\t A\t gamma"
+for ((ra = $RAMIN; ra < $RAMAX; ra++))
+do
+    for ((dec = $DECMIN; dec < $DECMAX; dec++))	
+    do
+	if (( $VERBOSE )) ; then date ; echo " ...... work in subdir $REGION" ; fi
+	OP2="[$EXTNUM][$r>$ra-1 && $r<$ra+3 && $d>$dec-1 && $d<$dec+3]"
+	REGION=$( printf "%03d" $ra )$( printf "%+03d" $dec )
+	mkdir $TARGET_DIR/$REGION
+	cd $TARGET_DIR/$REGION
+	# copy input file
+	for FILE in $list
+	do
+	    f=$FILE
+	    if (( $NEGATIVE_RA )) ; then 
+		rm -f TMPFILE1
+		eval fitscopy \'$FILE$OP1\' TMPFILE1
+		f="TMPFILE1"
+	    fi
+	    if [ ! -f "$DATAFILE" ]; then 
+		eval fitscopy \'$f$OP2\' $DATAFILE
+	    else
+		rm -f TMPFILE2
+		eval fitscopy \'$f$OP2\' TMPFILE2
+		funmerge TMPFILE2[$EXTNUM] $DATAFILE[$EXTNUM]
+	    fi
+	done
+	rm -f TMPFILE1 TMPFILE2
+	nrows=`funhead $DATAFILE[1] | grep NAXIS2 | awk '{print $3}'`	
+	if (( $VERBOSE )) ; then echo "    ... copy input data" ; fi
+	if [ "$nrows" == 0 ]; then
+	    # remove if empty 
+	    if (( $VERBOSE )) ; then echo "    ... remove empty dir" ; fi
+	    cd - > /dev/null
+	    rm -rf $dir
+	else
+	    # add boxes.info files
+	    if [ "$dec" -lt 0 ] ; then 
+		absdec=$(( 0 - $dec ))
+		flag=1
+	    else
+		absdec=$dec
+		flag=0
+	    fi
+	    boxid=$flag$( printf "%03d" $ra )$( printf "%02d" $absdec )0000
+	    xmin=$ra
+	    xmax=$(( $ra + 1 ))
+	    ymin=$dec
+	    ymax=$(( $dec + 1 ))
+	    rm -f boxes.info && touch boxes.info
+	    echo -e $line1 >> boxes.info
+	    grep -v A $TARGET_DIR/zbins.txt | awk '{printf "'$boxid' \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %4.2f\t %4.2f \n",'$xmin','$xmax','$ymin','$ymax',$1,$2,$3,$4}' >> boxes.info
+	    if (( $VERBOSE )) ; then echo "    ... create boxes.info" ; fi
+	fi
+	cd $dir
+	# add params.info file
+	if [ "$PFILE" != "NONE" ] ; then 
+	    cp $PFILE $TARGET_DIR/$REGION/params.info 
+	    if (( $VERBOSE )) ; then echo "    ... copy params.info" ; fi
+	fi
+	# add truth table
+        if [ "$TRUTH_DIR" != "NONE" ] ; then 
+	    maketruth $TRUTH_DIR $TARGET_DIR/$REGION 
+	    if (( $VERBOSE )) ; then echo "    ... create truth table" ; fi
+	fi
+	# add READY file
+	echo -e "Job created by script $0 \nusing data from dir $INPUT_DIR" >> $TARGET_DIR/$REGION/READY	    
+	if (( $VERBOSE )) ; then echo "    ... job is ready" ; fi
+    done
+done
+
+## do some cleanup and report
+
+if (( $VERBOSE )) ; then echo "== all regions processed ==" ; date; fi
+rm $TARGET_DIR/zbins.txt
+njobs=`ls $TARGET_DIR | wc -l`
+if (( $VERBOSE )) ; then echo " ...... NJOBS = $njobs" ; fi
+
+## say good bye and exit
+
+if (( $VERBOSE )) ; then echo "== end script $0 ==" ; fi
+exit 0
