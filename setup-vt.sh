@@ -1,17 +1,19 @@
-#!/bin/bash
 
-# Source this script to setup environment for vt cluster finder.
+## Usage: source setup-vt.sh
+## This script will setup environment variables for vt cluster finder.
 
-# Uncomment this line to run the script in verbose mode:
-# VERBOSE=1  
+## say hello and get started
 
 if (( $VERBOSE )) ; then echo " == set environment for vt runs ==" ; fi
+
+## export path to your VT installation
 
 export VT_DIR=`pwd`
 if (( $VERBOSE )) ; then echo " ...... your vt working dir is: $VT_DIR" ; fi
 
-CURRENT_PATH=$PATH
+## create unsetup script in case you want to remove vt from your system
 
+CURRENT_PATH=$PATH
 UNSETUP_SCRIPT="$VT_DIR/unsetup-vt.sh"
 rm -rf $UNSETUP_SCRIPT
 touch $UNSETUP_SCRIPT
@@ -23,6 +25,7 @@ echo "export VT_DIR=\"\"" >> $UNSETUP_SCRIPT
 echo "export PATH=$CURRENT_PATH" >> $UNSETUP_SCRIPT 
 if (( $VERBOSE )); then echo " ...... file $UNSETUP_SCRIPT updated" ; fi
 
+## add VT bin directory to your path
 
 if [[ :$PATH: == *:"$VT_DIR/bin":* ]] ; then
     if (( $VERBOSE )) ; then echo " ...... dir $VT_DIR/bin found in PATH" ; fi
@@ -31,6 +34,8 @@ else
     if (( $VERBOSE )) ; then echo " ...... dir $VT_DIR/bin added to PATH" ; fi
 fi
 
+## add "." to your path
+
 if [[ :$PATH: == *:".":* ]] ; then
     if (( $VERBOSE )) ; then echo " ...... dir ./ found in PATH" ; fi
 else
@@ -38,5 +43,6 @@ else
     if (( $VERBOSE )) ; then echo " ...... dir ./ added to PATH" ; fi
 fi
 
-if (( $VERBOSE )) ; then echo " == vt environment is set ==" ; fi
+## say goodbye and move on
 
+if (( $VERBOSE )) ; then echo " == vt environment is set ==" ; fi
