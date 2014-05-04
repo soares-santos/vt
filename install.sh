@@ -4,7 +4,7 @@ usage() {
     echo "
 $0 is a install script for the vt cluster finder.
 
-Usage: $0 [-h] [-q] [-o] [-r] [<target_directory>]
+Usage: $0  [-o] [-q] [-r] [<target_directory>]
 
 A vt directory will be created under the <target_directory>   
 and the vt code will be installed there. If omitted, the 
@@ -151,9 +151,9 @@ if [ ! -f "$dir/bin/vt" ]; then
     exit 1
 fi
 cd - >> /dev/null 2>&1
-cp setup-vt.sh $dir
-sed -i "s|\`pwd\`|$VT_DIR|" $dir/setup-vt.sh
-cp -r example $dir
+cp -r run example $dir
+sed -i "s|\`pwd\`|$VT_DIR|" $dir/run/setup-vt.sh
+sed -i "s|\`pwd\`|$VT_DIR|" $dir/run/setup-mysql.sh
 cp README $dir
 
 if (( $VERBOSE )) ; then echo "== install complete ==" ; fi
