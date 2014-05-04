@@ -80,12 +80,12 @@ nargs="$#"
 while getopts ":c:e:hop:qr:s:t:" opt; do
     case $opt in 
 	c)
-	    COLNAMES=( $OPTARG )
+	    COLS=( $OPTARG )
 	    (( nargs -=2 ))
-	    if [ "${#COLNAMES[@]}" == 4 ]; then
+	    if [ "${#COLS[@]}" == 4 ]; then
 		ZERR_PROVIDED=0
 	    else
-		if [ "${#COLNAMES[@]}" -ne 5 ]; then
+		if [ "${#COLS[@]}" -ne 5 ]; then
 		    echo "Option -c is used to replace the default list of"      >&2 
 		    echo "column names that the vt will read from the input file."     >&2 
 		    echo "The list must be given in thisformat: \"ID RA DEC Z ZERR\""  >&2 
@@ -192,12 +192,11 @@ if (( $VERBOSE )) ; then
         AREA_RANGE = ${AREA_RANGE[@]}
         SIGMA_Z = $SIGMA_Z"
 fi
-
 RAMIN=${AREA_RANGE[0]}
 RAMAX=${AREA_RANGE[1]}
 DECMIN=${AREA_RANGE[2]}
 DECMAX=${AREA_RANGE[3]}
-COLS=( $COLNAMES )
+TMP_DIR="/tmp"
 
 ## check input files
 
@@ -278,14 +277,14 @@ FILE=${list[0]}
 if [ "${#COLS[@]}" == 5 ]
 then  
     if (( $VERBOSE )) ; then echo " ...... Using ZERR column to calgulate SIGMA_Z." ; fi
-    fundisp -n $FILE[$EXTNUM] "${COLS[3]} ${COLS[4]}" > $TARGET_DIR/zzerr.txt    
+    fundisp -n $FILE[$EXTNUM] "${COLS[3]} ${COLS[4]}" > $TMP_DIR/zzerr.txt    
 else
     if (( $VERBOSE )) ; then echo " ...... ZERR column not provided. Using SIGMA_Z = $SIGMA_Z" ; fi
-    fundisp -n $FILE[$EXTNUM] "${COLS[3]}" | awk '{print $1 "\t 0"}' > $TARGET_DIR/zzerr.txt    
+    fundisp -n $FILE[$EXTNUM] "${COLS[3]}" | awk '{print $1 "\t 0"}' > $TMP_DIR/zzerr.txt    
 fi 
-zbins $ZMIN $ZMAX $SIGMA_Z $TARGET_DIR/zzerr.txt > $TARGET_DIR/zbins.txt
-rm $TARGET_DIR/zzerr.txt
-if (( $VERBOSE )) ; then echo " ...... created file $TARGET_DIR/zbins.txt" ; fi
+zbins $ZMIN $ZMAX $SIGMA_Z $TMP_DIR/zzerr.txt > $TMP_DIR/zbins.txt
+rm $TMP_DIR/zzerr.txt
+if (( $VERBOSE )) ; then echo " ...... created file $TMP_DIR/zbins.txt" ; fi
 
 ## create region subdirs
 
@@ -296,15 +295,16 @@ r=`echo ${COLNAMES} | awk '{print $2}'`
 d=`echo ${COLNAMES} | awk '{print $3}'`
 OP1="[$EXTNUM][col *;$r=($r<0)?$r+360:$r]"
 line1="# boxID \t ramin \t ramax \t\t decmin\t decmax\t \t zmin \t zmax \t\t A\t gamma"
+nremoved=0
 for ((ra = $RAMIN; ra < $RAMAX; ra++))
 do
     for ((dec = $DECMIN; dec < $DECMAX; dec++))	
     do
-	if (( $VERBOSE )) ; then date ; echo " ...... work in subdir $REGION" ; fi
 	OP2="[$EXTNUM][$r>$ra-1 && $r<$ra+3 && $d>$dec-1 && $d<$dec+3]"
 	REGION=$( printf "%03d" $ra )$( printf "%+03d" $dec )
 	mkdir $TARGET_DIR/$REGION
 	cd $TARGET_DIR/$REGION
+	if (( $VERBOSE )) ; then date ; echo " ...... work in subdir $REGION" ; fi
 	# copy input file
 	for FILE in $list
 	do
@@ -324,12 +324,13 @@ do
 	done
 	rm -f TMPFILE1 TMPFILE2
 	nrows=`funhead $DATAFILE[1] | grep NAXIS2 | awk '{print $3}'`	
-	if (( $VERBOSE )) ; then echo "    ... copy input data" ; fi
+	if (( $VERBOSE )) ; then echo "        copy input data" ; fi
 	if [ "$nrows" == 0 ]; then
 	    # remove if empty 
-	    if (( $VERBOSE )) ; then echo "    ... remove empty dir" ; fi
-	    cd - > /dev/null
-	    rm -rf $dir
+	    if (( $VERBOSE )) ; then echo "        remove empty dir" ; fi
+	    cd $dir
+	    rm -rf $TARGET_DIR/$REGION
+	    (( nremoved += 1 ))
 	else
 	    # add boxes.info files
 	    if [ "$dec" -lt 0 ] ; then 
@@ -337,43 +338,46 @@ do
 		flag=1
 	    else
 		absdec=$dec
-		flag=0
+		flag=2
 	    fi
-	    boxid=$flag$( printf "%03d" $ra )$( printf "%02d" $absdec )0000
+	    boxid=$flag$( printf "%03d" $ra )$( printf "%02d" $absdec )0000000
 	    xmin=$ra
 	    xmax=$(( $ra + 1 ))
 	    ymin=$dec
 	    ymax=$(( $dec + 1 ))
 	    rm -f boxes.info && touch boxes.info
 	    echo -e $line1 >> boxes.info
-	    grep -v A $TARGET_DIR/zbins.txt | awk '{printf "'$boxid' \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %4.2f\t %4.2f \n",'$xmin','$xmax','$ymin','$ymax',$1,$2,$3,$4}' >> boxes.info
-	    if (( $VERBOSE )) ; then echo "    ... create boxes.info" ; fi
+	    grep -v A $TMP_DIR/zbins.txt | awk '{printf "%u \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %4.2f\t %4.2f \n",'$boxid'+NR*10000,'$xmin','$xmax','$ymin','$ymax',$1,$2,$3,$4}' >> boxes.info
+	    if (( $VERBOSE )) ; then echo "        create boxes.info" ; fi
+	    cd $dir
+	    # add params.info file
+	    if [ "$PFILE" != "NONE" ] ; then 
+		cp $PFILE $TARGET_DIR/$REGION/params.info 
+		if (( $VERBOSE )) ; then echo "        copy params.info" ; fi
+	    fi
+	    # add truth table
+            if [ "$TRUTH_DIR" != "NONE" ] ; then 
+		maketruth $TRUTH_DIR $TARGET_DIR/$REGION 
+		if (( $VERBOSE )) ; then echo "        create truth table" ; fi
+	    fi
+	    # add READY file
+	    rm -f $TARGET_DIR/$REGION/READY	&& touch $TARGET_DIR/$REGION/READY
+	    date >> $TARGET_DIR/$REGION/READY  
+	    echo -e "Job created by script $0 \nUsing data from dir $INPUT_DIR" >> $TARGET_DIR/$REGION/READY	    
+	    if (( $VERBOSE )) ; then echo "        job is ready" ; fi	    
 	fi
-	cd $dir
-	# add params.info file
-	if [ "$PFILE" != "NONE" ] ; then 
-	    cp $PFILE $TARGET_DIR/$REGION/params.info 
-	    if (( $VERBOSE )) ; then echo "    ... copy params.info" ; fi
-	fi
-	# add truth table
-        if [ "$TRUTH_DIR" != "NONE" ] ; then 
-	    maketruth $TRUTH_DIR $TARGET_DIR/$REGION 
-	    if (( $VERBOSE )) ; then echo "    ... create truth table" ; fi
-	fi
-	# add READY file
-	rm -f $TARGET_DIR/$REGION/READY	&& touch $TARGET_DIR/$REGION/READY
-	date >> $TARGET_DIR/$REGION/READY  
-	echo -e "Job created by script $0 \nUsing data from dir $INPUT_DIR" >> $TARGET_DIR/$REGION/READY	    
-	if (( $VERBOSE )) ; then echo "    ... job is ready" ; fi
     done
 done
 
-## do some cleanup and report
+## cleanup and report
 
-if (( $VERBOSE )) ; then echo "== all regions processed ==" ; date; fi
-rm $TARGET_DIR/zbins.txt
+if (( $VERBOSE )) ; then echo "== cleanup and report ==" ; fi
+rm $TMP_DIR/zbins.txt
 njobs=`ls $TARGET_DIR | wc -l`
-if (( $VERBOSE )) ; then echo " ...... NJOBS = $njobs" ; fi
+ntotal=$(( $njobs + $nremoved ))
+if (( $VERBOSE )) ; then echo " ...... Processed a total of $ntotal regions:" ; fi
+if (( $VERBOSE )) ; then echo "        N_JOBS_TO_PROCESS = $njobs" ; fi
+if (( $VERBOSE )) ; then echo "        N_EMPTY_REGIONS = $nremoved" ; fi
 
 ## say good bye and exit
 

@@ -156,6 +156,11 @@ sed -i "s|\`pwd\`|$VT_DIR|" $dir/run/setup-vt.sh
 sed -i "s|\`pwd\`|$VT_DIR|" $dir/run/setup-mysql.sh
 cp README $dir
 
-if (( $VERBOSE )) ; then echo "== install complete ==" ; fi
+if (( $VERBOSE )) ; 
+then 
+    echo "== install complete ==" 
+else
+    rm $VT_DIR/install.log
+fi
 
 exit 0
