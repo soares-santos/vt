@@ -351,9 +351,15 @@ do
 	    if (( $VERBOSE )) ; then echo "        create boxes.info" ; fi
 	    cd $dir
 	    # add params.info file
-	    if [ "$PFILE" != "NONE" ] ; then 
+	    if [ "$PFILE" != "NONE" ] ; 
+	    then 
 		cp $PFILE $TARGET_DIR/$REGION/params.info 
 		if (( $VERBOSE )) ; then echo "        copy params.info" ; fi
+	    else
+		touch $TARGET_DIR/$REGION/params.info 
+		echo "RA=${COLS[1]}" >> $TARGET_DIR/$REGION/params.info 
+		echo "DEC=${COLS[2]}" >> $TARGET_DIR/$REGION/params.info 
+		echo "Z=${COLS[3]}" >> $TARGET_DIR/$REGION/params.info 
 	    fi
 	    # add truth table
             if [ "$TRUTH_DIR" != "NONE" ] ; then 
