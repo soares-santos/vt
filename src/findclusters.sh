@@ -107,8 +107,8 @@ do
 	cd $base/$run2 
 	if [ -f ${glx_cat}.candidates.fit ]
 	then 
-	    `tabmerge ${tmp}_VTclusters.fit+1 ${glx_cat}.candidates.fit+1`
-	    `tabmerge ${tmp}_VTgalaxies.fit+1 ${glx_cat}.membercand.fit+1`
+	    tabmerge ${tmp}_VTclusters.fit+1 ${glx_cat}.candidates.fit+1
+	    tabmerge ${tmp}_VTgalaxies.fit+1 ${glx_cat}.membercand.fit+1
  	    rm ${tmp}_VTclusters.fit ${tmp}_VTgalaxies.fit
 	else 
 	    mv ${tmp}_VTclusters.fit ${glx_cat}.candidates.fit
@@ -127,11 +127,8 @@ cd $run2
 cp ${glx_cat}.candidates.fit ${glx_cat}.membercand.fit $base
 `fitscopy ${glx_cat}.'candidates.fit[col id;ra_min=ra_c-1.5/cos(dec_c*#deg);ra_max=ra_c+1.5/cos(dec_c*#deg);dec_min=dec_c-1.5;dec_max=dec_c+1.5;z_min=z_c-'$err_z'*(1+z_c);z_max=z_c+'$err_z'*(1+z_c);w_amp=A;w_pow=g]' run2.boxes.fit`
 `dumpfits 'run2.boxes.fit[1]' > boxes`
+
 nboxes=`cat boxes | wc -l` 
-#frame_ra_min=$ra_min
-#frame_ra_max=$ra_max
-#frame_dec_min=$dec_min
-#frame_dec_max=$dec_max
 echo "$nboxes cluster candidates to process at Run 2."
 if [ $nboxes -lt 1 ] ; then exit ; fi
 echo "Processing..."
@@ -171,7 +168,6 @@ do
 	fi
 	ired=`expr $ired + 1`
     done
-#    `vt -v -A $A -g $g -r $rcl -s $scl -F $frame_ra_min $frame_ra_max $frame_dec_min $frame_dec_max -C $ID $RA $DEC $Z $tmp.fit > $tmp.log`
     `vt -v -A $A -g $g -r $rcl -s $scl -C $ID $RA $DEC $Z $tmp.fit > $tmp.log`
     if [ -f ${tmp}_VTclusters.fit ] 
     then 
@@ -186,14 +182,13 @@ do
 	else
 	    filter="host_id==$id2"
 	    `fitscopy ${tmp}_VTgalaxies.fit'['$filter']' VTgalaxies.tmp.1.fit`
-	    filter="id_run1=$id"
+	    filter="id_run1(K)=$id"
 	    `fitscopy VTclusters.tmp.1.fit'[#row==1][col *;'$filter']' \!VTclusters.tmp.2.fit`
 	    `fitscopy VTgalaxies.tmp.1.fit'[col *;'$filter']' VTgalaxies.tmp.2.fit`	
 	    if [ -f $base/${glx_cat}.candidates.run2.fit ]
 	    then 
-		`tabmerge VTclusters.tmp.2.fit+1 $base/${glx_cat}.candidates.run2.fit+1`
-		`tabmerge VTgalaxies.tmp.2.fit+1 $base/${glx_cat}.membercand.run2.fit+1`
-		rm VTclusters.tmp.?.fit VTgalaxies.tmp.?.fit
+		tabmerge VTclusters.tmp.2.fit+1 $base/${glx_cat}.candidates.run2.fit+1
+		tabmerge VTgalaxies.tmp.2.fit+1 $base/${glx_cat}.membercand.run2.fit+1
 	    else 
 		mv VTclusters.tmp.2.fit $base/${glx_cat}.candidates.run2.fit
 		mv VTgalaxies.tmp.2.fit $base/${glx_cat}.membercand.run2.fit
@@ -206,10 +201,10 @@ done
 cd $base
 rm -f tmp.fit
 fitscopy $base/${glx_cat}.candidates.run2.fit'[col -id]' tmp.fit && mv tmp.fit  $base/${glx_cat}.candidates.run2.fit
-fitscopy $base/${glx_cat}.candidates.run2.fit'[col *;id=id_run1]' tmp.fit && mv tmp.fit  $base/${glx_cat}.candidates.run2.fit
+fitscopy $base/${glx_cat}.candidates.run2.fit'[col *;id(K)=id_run1]' tmp.fit && mv tmp.fit  $base/${glx_cat}.candidates.run2.fit
 fitscopy $base/${glx_cat}.candidates.run2.fit'[col -id_run1]' tmp.fit && mv tmp.fit  $base/${glx_cat}.candidates.run2.fit
 fitscopy $base/${glx_cat}.membercand.run2.fit'[col -host_id]' tmp.fit && mv tmp.fit  $base/${glx_cat}.membercand.run2.fit
-fitscopy $base/${glx_cat}.membercand.run2.fit'[col *;host_id=id_run1]' tmp.fit && mv tmp.fit  $base/${glx_cat}.membercand.run2.fit
+fitscopy $base/${glx_cat}.membercand.run2.fit'[col *;host_id(K)=id_run1]' tmp.fit && mv tmp.fit  $base/${glx_cat}.membercand.run2.fit
 fitscopy $base/${glx_cat}.membercand.run2.fit'[col -id_run1]' tmp.fit && mv tmp.fit  $base/${glx_cat}.membercand.run2.fit
 echo "Run 2 complete."
 echo `date`

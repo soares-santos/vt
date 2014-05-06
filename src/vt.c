@@ -279,6 +279,7 @@ int main(int argc, char *argv[]) {
 
   ARRAY1(Footprint,footprint,n1);
   SetFootprints(connection_1);
+  host_id_list_1=(long long *) calloc(ndata,sizeof(long long));
   AssignMembers(connection_1);
   ComputeRedshifts(connection_1);
 
@@ -296,6 +297,7 @@ int main(int argc, char *argv[]) {
   free(footprint);
   free(connection_1); 
   free(central);
+  free(host_id_list_1);
   //  free(ttype);
   //  free(ttypeH);
 

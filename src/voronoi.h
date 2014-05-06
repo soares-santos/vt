@@ -101,7 +101,7 @@ int ndata, ndata_ok, nholes, *edge, *prox, Verbose, ndataused,
   *mask1,                                          /* Label for each galaxy */
   *central,*edge1,                                 /* flag for each galaxy  */
   nclusters;
-long long *number, FieldID;
+long long *number, FieldID,*host_id_list_1;
 short  *voronoi_inside;                           /* Label for voronoi edges */
 Footprint *footprint;
 char *ttype[4],*ttypeH[4];

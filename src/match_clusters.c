@@ -67,7 +67,7 @@ void match(void){
     mf1[i]         = 0.;
     id_cls_3[n]    = id_cls_1[i]*10+1;
     id_cnd_3[n]    = id_cls_1[i];
-    if(MoreVerbose) printf("\ncluster id : %ld   \t",id_cls_1[i]);
+    if(MoreVerbose) printf("\ncluster id : %lld   \t",id_cls_1[i]);
     /* ... find members */
     for(j=0;j<nglx_1;j++)
       if(host_id_1[j]==id_cls_1[i]){
@@ -89,7 +89,7 @@ void match(void){
       id_cls_3[p]    = id_cls_2[k]*10+2;
       id_cnd_3[p]    = id_cls_2[k];
       /* ... find members */
-      if(MoreVerbose) printf("\n trying match to cluster %d ...\t",id);
+      if(MoreVerbose) printf("\n trying match to cluster %lld ...\t",id_cls_2[k]);
       for(j=0;j<nglx_2;j++)
 	if(host_id_2[j]==id_cls_2[k]){
 	  ++m;

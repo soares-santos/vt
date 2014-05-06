@@ -1006,7 +1006,7 @@ void WriteSimpleMembersList() {
   strcat(outname,".VTmembers.list");
   fp=fopen(outname, "w");
   for(i=0;i<ndata;i++)
-    if(edge1[i]==0) fprintf(fp, "%lld %lld \n", number[i], hid=mask1[i]);
+    if(edge1[i]==0) fprintf(fp, "%lld %lld \n", number[i], hid=host_id_list_1[i]);
   fclose(fp);
   if(Verbose) printf("Members list saved.\n");
 } /* WriteSimpleMembersList() */
@@ -1224,7 +1224,7 @@ void WriteGalaxyCatalog() {
     if (!XYcoord) tmp=cos((in.pointlist[2*i+1]+ymean)*M_PI/180.);
     fprintf(fp, "%lld %lld %lf %lf %lf %lf %lf %lf %d\n",
 	    llrow[0][0]=number[i],
-	    llrow[1][0]=mask1[i], 
+	    llrow[1][0]=host_id_list_1[i],
 	    Rrow[0][0]=xmean+in.pointlist[2*i]/tmp,
 	    Rrow[1][0]=in.pointlist[2*i+1]+ymean,
 	    Rrow[2][0]=redsh[i],
@@ -1506,9 +1506,10 @@ void AssignMembers(Connect *conn){
   register int i;
   Footprint *p_cir=footprint;
   Connect *p_conn=conn;
-  for(i=0;i<ndata;i++) mask1[i]=0;  
+  for(i=0;i<ndata;i++) host_id_list_1[i]=0;
   while (p_conn != NULL) { 
-    for(i=0;i<p_conn->n;i++) mask1[p_conn->list[i]]=p_cir->id; 
+    for(i=0;i<p_conn->n;i++)
+      host_id_list_1[p_conn->list[i]]=p_cir->id;
     p_conn=p_conn->link; 
     p_cir++;
   } 
