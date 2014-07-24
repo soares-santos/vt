@@ -155,6 +155,7 @@ cp -r run example $dir
 sed -i "s|\`pwd\`|$VT_DIR|" $dir/run/setup-vt.sh
 sed -i "s|\`pwd\`|$VT_DIR|" $dir/run/setup-mysql.sh
 cp README $dir
+cp run/prep-vt-jobs $dir/bin
 
 if (( $VERBOSE )) ; 
 then 

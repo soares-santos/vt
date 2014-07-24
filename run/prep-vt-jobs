@@ -300,7 +300,7 @@ for ((ra = $RAMIN; ra < $RAMAX; ra++))
 do
     for ((dec = $DECMIN; dec < $DECMAX; dec++))	
     do
-	OP2="[$EXTNUM][$r>$ra-1 && $r<$ra+3 && $d>$dec-1 && $d<$dec+3]"
+	OP2="[$EXTNUM][$r>$ra-1 && $r<$ra+2 && $d>$dec-1 && $d<$dec+2]"
 	REGION=$( printf "%03d" $ra )$( printf "%+03d" $dec )
 	mkdir $TARGET_DIR/$REGION
 	cd $TARGET_DIR/$REGION
