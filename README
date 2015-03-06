@@ -18,7 +18,7 @@ INSTALL
 
 	cd vt 
 	./install.sh <target_dir>
-	source <target_dir>/vt/setup-vt.sh
+	source <target_dir>/run/setup-vt.sh
 
 INPUT FILES 
 
