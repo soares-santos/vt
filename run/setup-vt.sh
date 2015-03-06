@@ -14,7 +14,7 @@ if (( $VERBOSE )) ; then echo " ...... your vt working dir is: $VT_DIR" ; fi
 ## create unsetup script in case you want to remove vt from your system
 
 CURRENT_PATH=$PATH
-UNSETUP_SCRIPT="$VT_DIR/unsetup-vt.sh"
+UNSETUP_SCRIPT="$VT_DIR/run/unsetup-vt.sh"
 rm -rf $UNSETUP_SCRIPT
 touch $UNSETUP_SCRIPT
 echo "
@@ -46,4 +46,3 @@ fi
 ## say goodbye and move on
 
 if (( $VERBOSE )) ; then echo " == vt environment is set ==" ; fi
-screen -X title test
