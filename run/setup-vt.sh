@@ -46,3 +46,4 @@ fi
 ## say goodbye and move on
 
 if (( $VERBOSE )) ; then echo " == vt environment is set ==" ; fi
+screen -X title test

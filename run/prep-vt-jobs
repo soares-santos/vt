@@ -170,6 +170,8 @@ if [ "$VT_DIR" == "" ] ; then
     echo "       Please source the setup-vt.sh script and try this again." >&2
     exit 1
 fi
+TMP_DIR=$VT_DIR/tmp
+if [ ! -d $TMP_DIR ] ; then mkdir $TMP_DIR ; fi
 
 ## say hello and get started
 
@@ -196,7 +198,6 @@ RAMIN=${AREA_RANGE[0]}
 RAMAX=${AREA_RANGE[1]}
 DECMIN=${AREA_RANGE[2]}
 DECMAX=${AREA_RANGE[3]}
-TMP_DIR="/tmp"
 
 ## check input files
 
@@ -300,7 +301,7 @@ for ((ra = $RAMIN; ra < $RAMAX; ra++))
 do
     for ((dec = $DECMIN; dec < $DECMAX; dec++))	
     do
-	OP2="[$EXTNUM][$r>$ra-1 && $r<$ra+3 && $d>$dec-1 && $d<$dec+3]"
+	OP2="[$EXTNUM][$r>$ra-1 && $r<$ra+2 && $d>$dec-1 && $d<$dec+2]"
 	REGION=$( printf "%03d" $ra )$( printf "%+03d" $dec )
 	mkdir $TARGET_DIR/$REGION
 	cd $TARGET_DIR/$REGION
@@ -310,19 +311,19 @@ do
 	do
 	    f=$FILE
 	    if (( $NEGATIVE_RA )) ; then 
-		rm -f TMPFILE1
-		eval fitscopy \'$FILE$OP1\' TMPFILE1
-		f="TMPFILE1"
+		rm -f $TMP_DIR/TMPFILE1
+		eval fitscopy \'$FILE$OP1\' $TMP_DIR/TMPFILE1
+		f="$TMP_DIR/TMPFILE1"
 	    fi
 	    if [ ! -f "$DATAFILE" ]; then 
 		eval fitscopy \'$f$OP2\' $DATAFILE
 	    else
-		rm -f TMPFILE2
-		eval fitscopy \'$f$OP2\' TMPFILE2
-		funmerge TMPFILE2[$EXTNUM] $DATAFILE[$EXTNUM]
+		rm -f $TMP_DIR/TMPFILE2
+		eval fitscopy \'$f$OP2\' $TMP_DIR/TMPFILE2
+		funmerge $TMP_DIR/TMPFILE2[$EXTNUM] $DATAFILE[$EXTNUM]
 	    fi
 	done
-	rm -f TMPFILE1 TMPFILE2
+	rm -f $TMP_DIR/TMPFILE1 $TMP_DIR/TMPFILE2
 	nrows=`funhead $DATAFILE[1] | grep NAXIS2 | awk '{print $3}'`	
 	if (( $VERBOSE )) ; then echo "        copy input data" ; fi
 	if [ "$nrows" == 0 ]; then
@@ -347,7 +348,7 @@ do
 	    ymax=$(( $dec + 1 ))
 	    rm -f boxes.info && touch boxes.info
 	    echo -e $line1 >> boxes.info
-	    grep -v A $TMP_DIR/zbins.txt | awk '{printf "%u \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %4.2f\t %4.2f \n",'$boxid'+NR*10000,'$xmin','$xmax','$ymin','$ymax',$1,$2,$3,$4}' >> boxes.info
+	    grep -v A zbins.txt | awk '{printf "%u \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %4.2f\t %4.2f \n",'$boxid'+NR*10000,'$xmin','$xmax','$ymin','$ymax',$1,$2,$3,$4}' >> boxes.info
 	    if (( $VERBOSE )) ; then echo "        create boxes.info" ; fi
 	    cd $dir
 	    # add params.info file
@@ -359,7 +360,8 @@ do
 		touch $TARGET_DIR/$REGION/params.info 
 		echo "RA=${COLS[1]}" >> $TARGET_DIR/$REGION/params.info 
 		echo "DEC=${COLS[2]}" >> $TARGET_DIR/$REGION/params.info 
-		echo "Z=${COLS[3]}" >> $TARGET_DIR/$REGION/params.info 
+		echo "Z=${COLS[3]}" >> $TARGET_DIR/$REGION/params.info
+		echo "ID=${COLS[0]}" >> $TARGET_DIR/$REGION/params.info
 	    fi
 	    # add truth table
             if [ "$TRUTH_DIR" != "NONE" ] ; then 
@@ -374,11 +376,11 @@ do
 	fi
     done
 done
+if (( $VERBOSE )) ; then date ; fi
 
-## cleanup and report
+## report
 
-if (( $VERBOSE )) ; then echo "== cleanup and report ==" ; fi
-rm $TMP_DIR/zbins.txt
+if (( $VERBOSE )) ; then echo "== report ==" ; fi
 njobs=`ls $TARGET_DIR | wc -l`
 ntotal=$(( $njobs + $nremoved ))
 if (( $VERBOSE )) ; then echo " ...... Processed a total of $ntotal regions:" ; fi

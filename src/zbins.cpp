@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
   cout << "# zmin \t\t zmax \t\t A \t gamma\n";
 
   while (z0<zf) {
-    z1=z0+sigmaz*(1+z);
+    z1=z0+2*sigmaz*(1+z0);
     cout << "  " << z0 << " \t " << z1 << " \t " << A(z0) << " \t " << gamma(z0) << "\n";
     z0=z1;
   }
