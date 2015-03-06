@@ -12,13 +12,13 @@ DOWNLOAD
 	Latest release:
 	https://bitbucket.org/marcelle/vt/downloads/vt-1.10.tar.gz	
 	Latest development version:
-	git clone https://marcelle@bitbucket.org/marcelle/vt.git
+	git clone https://<UserName>@bitbucket.org/marcelle/vt.git
 	
 INSTALL
 
 	cd vt 
 	./install.sh <target_dir>
-	source <target_dir>/run/setup-vt.sh
+	source <target_dir>/vt/run/setup-vt.sh
 
 INPUT FILES 
 
