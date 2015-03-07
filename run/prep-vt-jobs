@@ -348,7 +348,7 @@ do
 	    ymax=$(( $dec + 1 ))
 	    rm -f boxes.info && touch boxes.info
 	    echo -e $line1 >> boxes.info
-	    grep -v A zbins.txt | awk '{printf "%u \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %4.2f\t %4.2f \n",'$boxid'+NR*10000,'$xmin','$xmax','$ymin','$ymax',$1,$2,$3,$4}' >> boxes.info
+	    grep -v A $TMP_DIR/zbins.txt | awk '{printf "%u \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %6.4f\t %6.4f \t %4.2f\t %4.2f \n",'$boxid'+NR*10000,'$xmin','$xmax','$ymin','$ymax',$1,$2,$3,$4}' >> boxes.info
 	    if (( $VERBOSE )) ; then echo "        create boxes.info" ; fi
 	    cd $dir
 	    # add params.info file
