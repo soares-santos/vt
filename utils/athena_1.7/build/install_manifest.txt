@@ -1,0 +1,2 @@
+/home/fsobreira/athena/athena_1.7/bin/athena
+/home/fsobreira/athena/athena_1.7/bin/venice

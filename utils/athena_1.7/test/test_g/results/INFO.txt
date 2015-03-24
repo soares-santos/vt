@@ -1,0 +1,3 @@
+The files 'wgl' and 'wgl.resample' are the result from running 'athena' in the
+directory 'test_g'. The correct usage of the code should reproduce these result
+modulo rounding errors.

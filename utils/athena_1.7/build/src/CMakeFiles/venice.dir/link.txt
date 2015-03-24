@@ -1,0 +1,1 @@
+/usr/bin/gcc  -Wall -Wuninitialized -pedantic -DNO_FILE_MSG -std=c99 -O3  -fPIC CMakeFiles/venice.dir/venice.c.o  -o venice -rdynamic -L/opt/local/lib -lgsl -lgslcblas -lm -Wl,-rpath,/opt/local/lib 

@@ -1,0 +1,4 @@
+The files 'w_theta_i_j_[LS|Ham].dat' are the results of running 'woftheta_xcorr.pl'
+in the directory 'test_w'. The correct usage of the code should reproduce these
+results within the error bars. Note that both the resampled and the Poisson errors
+change from run to run since they depend on the realisation of the random catalogue.

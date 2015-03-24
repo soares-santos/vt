@@ -1,0 +1,606 @@
+================================================
+athena
+Version 1.7 (03/2014)
+Tree code for two-point correlation functions
+power spectra, and smooth second-order functions
+Authors:
+Martin Kilbinger
+Christopher Bonnett
+Jean Coupon
+2007-2014
+================================================
+
+=====================
+Table of content:
+ 1. Compiling the code
+ 2. Running the code
+ 3. Configuration file
+ 4. File formats
+ 5. Weights
+ 6. Open angle
+ 7. Angular correlation function w(theta)
+ 8. Projections
+ 9. Convergence power spectrum and smooth 2nd-order functions
+10. Testing the code
+11. Known bugs
+12. Acknowledgments
+13. Contact
+=====================
+
+
+=====================
+1. Compiling the code
+=====================
+
+Download the code, and (optional) the test data, from
+http://cosmostat.org/athena (see also http://ascl.net/athena), and un-tar it.
+Two options to compile the code exists:
+
+1) Using cmake to create a Makefile and to find libraries e.g. cfitsio.
+
+Compile the code in a build directory. E.g. in the athena root directory
+athena_1.7, type
+
+	cd build
+	cmake ..
+	make && make install
+
+'make install' will just copy the executables athena and venice to ../bin.
+
+2) Using make.
+
+	cd src
+	make -f Makefile.athena
+
+No external packages or libraries are compulsory. However, venice (see Sect.
+7.1), needed to obtain random catalogues for spatial correlation functions,
+requires GSL (GNU Scientific Library, www.gls.org). Further, for (optional)
+FITS file format support, the cfitsio library is used. cmake automatically
+finds those libraries. For option 2, edit the variables 'GSL', 'FITS', and
+'LIBFITS' in src/Makefile.athena . 
+
+
+===================
+2. Running the code
+===================
+
+The command
+
+	athena_1.7/bin/athena [-c config_file]
+
+runs the tree code. A configuration file has to be present, see Sect. 3.
+Type 'athena -h' for command line options.
+
+Test data sets and config files can be found in the directories test_xi
+(shear-shear), test_g (shear-position), and test_w (position-position), all
+subdirectories of test.  See Sect. 7 to calculate the full (position-position)
+angular correlation function, including the generation and use of random
+catalogues. A test script exists that runs athena and pallas.py, which produces
+output that can be compared to reference output (in test/test_*/results). To
+run the tests, type in athena_1.7:
+
+	bin/test_suite_athena.py
+
+
+=====================
+3. Configuration file
+=====================
+
+The configuration file (first command line argument; default "config_tree") has
+to contain the following entries, in this order:
+
+GALCAT1          string		First galaxy catalogue, ascii or fits format.
+				  For shear-position, this is the background (shear)
+				  catalogue
+
+GALCAT2          string		Second catalogue (for cross-correlation.
+				  Can be same as GALCAT1 or "-" for
+				  auto-correlation). Same file format as first catalogue.
+				  For shear-position, this is the foreground (position)
+				  catalogue
+
+WCORR		 integer	Type of correlation:
+				  1: shear-shear (aka cosmic shear)
+				  2: shear-position (aka galaxy-lensing)
+				  4: position-position (aka w of theta)
+
+# If WCORR is nn:
+SWCORR_SUBTYPE  string		Correlation sub-type:
+				  nn_2d: 2D (angular) correlation
+				  nn_3d: 3D correlation (NOT WELL TESTED)
+				  nn_rp_pi: 3D correlation, separated in parallel and
+				  	    tangential coordinates (NOT WELL TESTED)
+# endif
+
+SFORMAT          string		Format of the catalogue, see gal_cat.c. One
+				  of "standard", "position", "position_jack_num",
+				  "lensing_jack_num", "hamana", and "fits", see below
+
+# If SFORMAT is fits:
+NCOL             integer        Number of columns to be read from fits file
+
+COL_NAMES        NCOL strings   Names of the NCOL columns. Each string has the format
+                                  "type:name", where type can be
+                                  x (x-coordinate), y (y-coordinate), z (z-coordinate),
+                                  e1 (first shear component), e2 (second shear component),
+				  w (weight), njk (resample number, e.g. Jackknife sample
+                                  number). For example, for a shear input catalogue:
+                                  x:RA y:DEC e1:E1 e2:E2 w:WEIGHT
+#endif
+
+SCOORD_INPUT     string		Coordinate units of input catalogue(s). One of
+		 		 "arcsec", "arcmin", "deg", "rad"
+
+SCOORD_OUTPUT    string	        Coordinate units of output file(s), i.e. correlation data.
+		  		 One of "arcsec", "arcmin", "deg", "rad"
+
+THMIN            double		Minimum angular separation, in unit as specified
+		 		  by "SCOORD_OUTPUT"
+
+THMAX            double		Maximum angular separation, in unit as specified
+		 		  by "SCOORD_OUTPUT"
+
+NTH              integer	Number of angular bins
+
+BINTYPE          string		"LIN" or "LOG" for linear or logarithmic bins
+
+RADEC            integer	0 (Cartesian coordinates) or > 0 (spherical
+		 		  coordinates)
+
+OATH             double		Open angle [rad], the smaller the slower
+				but more precise is the result. OATH=0 is 
+				equivalent to brute-force
+
+SERROR		 string		Error type, 'none', 'bootstrap' or 'jackknife'
+
+NRESAMPLE	 int int	Number of samples for error calculations, one number for
+		                 each catalogue. Ignored if SERROR = 'none'
+
+
+===============
+4. File formats
+===============
+
+--------------------------
+4.1 Input catalogue format
+--------------------------
+
+The following formats are supported, which can be chosen by the "SFORMAT" key
+in the config file. For all but "fits", the input catalogue is in ascii format.
+
+SFORMAT              Columns
+---------------------------------
+standard             x y e1 e2 w
+position             x y [z ...] w
+position_jack_num    x y w njk
+lensing_jack_num     x y e1 e2 w njk
+hamana               x y X X e1 e2
+fits                 Column types and names specified by COL_NAMES key
+
+x, y [z ...]: position in n dimensions (n=2, 3)
+njk:	      Number of Jackknife sample
+e1, e2:       ellipticity or shear (see 4.3.1 for the case of a scalar)
+w:            galaxy weight
+X:            unused, column is ignored
+
+The position coordinate units have to be specified in the config file (key
+"INPUT_COORD").
+
+The first line of the catalogue can but need not contain the total number of
+objects. If absent, the number of lines is counted before reading the catalogue
+(which might be slow for long files).
+
+--------------------
+4.2 Multiple objects
+--------------------
+
+The input catalogue can contain multiple objects, that is, objects at the
+identical positions. In that case, these objects are merged, which means that
+the average properties (shear, weight etc.) will be used in the correlation.
+(In practice, nodes which multiple objects are not spawned further into child
+nodes, which ensures that parent node containing the average properties
+represents the lowest level.)
+
+The command line option '-t' switches off merging. In case of multiple objects,
+the code will stop with an error message.
+
+-------------------------
+4.3 Output files (athena)
+-------------------------
+
+Diagnostic output is written to the file "log" and, in case the random number
+generator is initialised, the random seed is written to the file "init". The
+output correlation function files are in the same format as the input catalogue
+(ascii or fits). The default names are:
+
+shear-shear	        "xi"
+(scalar-scalar: see 4.3.1)
+shear-shear diagnostics "xiref" (with option '--out_xiref')
+shear-position	        "wgl"
+position-position       "w"
+
+In case of resampling (SERROR = "bootstrap" or "jackknife"), and ascii input
+catalogues, files with resampling error (suffix ".resample") and resampling
+covariance (suffix ".resample.cov") are created. In case of fits input and
+output, the resampling errors and covariance are written as additional hdu's.
+To display the fits output files in ascii format, use bin/fits2ascii.py .
+
+The output file names can be set with command line options of 'athena'. The
+file columns are as follows:
+
+"xi"
+1 theta			Angular separation in SCOORD_OUTPUT units (bin center)
+2 xi_p			xi_+ = <eps_t eps_t> + <eps_x eps_x>
+3 xi_m			xi_- = <eps_t eps_t> - <eps_x eps_x>
+4 xi_x			xi_x = <eps_t eps_x>
+5 w			Total weight
+6 sqrt_D		Poisson error
+7 sqrt_Dcor		Corrected Poisson error (see below)
+8 n_pair		Number of pairs
+
+"xiref" (with option '--out_xiref')
+1 theta			Angular separation in SCOORD_OUTPUT units (bin center)
+2 g11			<eps_1 eps_1>
+3 g22			<eps_2 eps_2>
+4 g12			<eps_1 eps_2>
+5 g21			<eps_2 eps_1>
+6 w			Total weight
+7 sqrt(D)		Poisson error
+8 sqrt(Dcor)		Corrected Poisson error (see below)
+9 npair			Number of pairs
+
+"wgl"
+1 theta			Angular separation in SCOORD_OUTPUT units (bin center)
+2 g_t			Tangential shear
+3 g_x			Cross-shear
+4 w			Total weight
+5 sqrt_D		Poisson error
+6 sqrt_Dcor		Corrected Poisson error (see below)
+7 n_pair		Number of pairs.
+
+"w"
+1 theta			Angular separation in SCOORD_OUTPUT units (bin center)
+2 n_pair		Number of pairs. For a single input catalogue, each
+			  pair of galaxies is counted only once.
+3 n_pair_resample_1	Number of pairs for re-sample #1
+...			...
+B+2 n_pair_resample_B	Number of pairs for re-sample #B
+
+
+
+The Poisson error sqrt(D) is the square root of the term D from eq. (27) of
+Schneider, van Waerbeke, Kilbinger & Mellier (2002) for shear-shear, and using
+an analogous expression for shear-position. The summation for the number of
+pairs is carried out over the pairs of nodes that are correlated, and not over
+all galaxy pairs. Therefore, the Poisson error depends on the open-angle
+threshold (OATH in config file): it increases with increasing OATH. A
+"corrected" Poisson error "sqrt(Dcor)" is therefore calculated, with is Dcor =
+D / (Npair/Nnode), that is, in each bin, D is down-weighted by the ratio of the
+number of galaxy pairs by the number of nodes.
+
+----------------------------
+4.3 Output files (pallas.py)
+----------------------------
+
+pallas.py reads an athena output file ('xi', 'wgl', or 'w', ascii or fits
+format) and produces various output files according to the option '-w'. The
+files with their default names are as follows, without extension ('txt' or
+'fits'):
+
+File                   Option ('-w') Description
+------------------------------------------------------------------------------------
+output_pkappa_ell      Pl            (biased) power spectrum
+output_pkappa_band     Pb            (de-biased) band-power spectrum
+output_map2_poly       Mp            aperture-mass dispersion with polynomial filter
+output_map2_gauss      Mg            aperture-mass dispersion with Gaussian filter
+------------------------------------------------------------------------------------
+
+The columns in the output files are:
+
+ell                    2D wave number (centre in case of band-power)
+P_E                    E-mode power spectrum
+P_B                    B-mode power spectrum
+P_EB                   (parity-violating) mixed E-/B-mode power spectrum
+ell_lower              lower band limit
+ell_upper              upper band limit
+theta                  angular scale (same units as input correlation file)
+<M_ap^2>               E-mode aperture-mass dispersion
+<M_x^2>                B-mode aperture-mass dispersion
+<M_apM_x>              (parity-violating) mixed E-/B-mode aperture-mass dispersion 
+
+-------------------------------
+4.4 Scalar correlation function
+-------------------------------
+
+Instead of the shear-shear correlation function xi_p, one can easily obtain the
+correlation function of a scalar k (e.g. kappa, magnification). Replace both e1
+and e2 in the input catalogue with k/sqrt(2) and the 'xi_p' column in the file
+'xi' will contain <k k>. The columns 'xi_m' and 'xi_x' are not defined in a
+meaningful sense in that case.
+
+---------------------
+4.5 Jackknife formats
+---------------------
+
+Jackknife errors are calculated for SERROR = jackknife.  This is supported for
+all input formats (SFORMAT key). For the formats 'position_jack_num' and
+'lensing_jack_num', the catalogue's format has to be 'Jackknife sample number',
+where each galaxy comes with its Jackknife sample number, an integer ranging
+from 0 to NRESAMPLE - 1. According to this number, the Jackknife samples are
+created.  For all other formats, no Jackknife sample number need to be present
+in the input catalogue. In these cases, athena creates Jackknife samples
+according to the number of resamples (NRESAMPLE key) and the field dimension.
+
+For display purposes, athena prints to file the input catalogue together with
+the list of Jackknife indices (0 or 1). This is the so-called 'Jackknife sample
+list' format. An plot of galaxy positions with color-coded Jackknife sample can
+be created with 'plot_cat_jack_list.pl'. To transform the two Jackknife
+catalogue formats into each other, use 'jack2jack.pl'.
+
+Jackknife sample numbers can be created from unique names via the script
+jack_name2numer.pl . In the input catalogue, one column for each object has to
+contain a string. The script replaces each string with a Jackknife sample
+number. The string can for example be the pointing or chip name of a Mosaic
+survey.
+
+With the command line options:  
+--out_ALL_xip_resample NAME_XIP  
+--out_ALL_xim_resample NAME_XIM  
+athena puts out a file named NAME_XIP and or NAME_XIM, respectively.
+These files contain: 
+1 theta  		Angular separation in SCOORD_OUTPUT units (bin center)
+2 (xi+ or xi-)_1        xi+ or xi- for bootstrap sample #1
+...
+B+1 (xi+ or xi-)_B	xi+ or xi- for bootstrap sample #B
+
+
+==========
+5. Weights
+==========
+
+For shear input catalogues, the galaxy weights are used to calculate the
+barycenter b of each node. The ellipticities e_1, e_2 for the shear-correlation
+are weighted by the galaxy weights. For the position-position correlation
+(angular clustering), all galaxies have an equal weight (of unity), the code
+does not calculate weighted angular correlation functions.
+
+
+=============
+6. Open angle
+=============
+
+If two nodes see each other under angles which are smaller than the open-angle
+threshold (OATH in config file), the tree is not further descended and those
+nodes are correlated directly. The mean, weighted galaxy ellipticities of the
+both nodes are multiplied, the angular separation is the binned barycenter
+distance.  This is of course very time-saving, which is the great advantage of
+a tree code over a brute-force approach. It introduces however errors in the
+correlation function, in particular on large scales, because the galaxy
+ellipticities are smeared out. One should play around with the value of OATH to
+see its influence on the results. As a guideline, OATH = 0.03 (1.7 degrees) can
+be used in most cases, although we recommend to run the code with OATH = 0.02
+and compare the results.
+
+
+========================================
+7. Angular correlation function w(theta)
+========================================
+
+The calculation of the angular correlation function w(theta) requires the use
+of random catalogues, to which the galaxy clustering is compared. Auto- and
+cross- correlations are required for estimators of w(theta). All this is
+implemented in the perl script
+
+bin/woftheta_xcorr.pl
+
+This script performs several steps. It creates a random catalogue with
+(optionally) reading a mask file, by calling 'venice'. It makes coordinate
+transformation of the catalogues, e.g. from spherical to Cartesian coordinates.
+It calls 'athena' to obtain data-data, data-random and random-random spatial
+correlations, for various redshift bins. Finally, the angular correlation
+function is calculated using the Landy&Szalay (1993) and the Hamilton (1993)
+estimators. Bootstrap and Poisson errors are added.
+
+For N catalogues the auto- and cross-correlation functions are calculated.
+Including all combinations of data and random catalogues, this makes N(N+1)/2 +
+N + 1 = N^2/2 + 3N/2 + 1 calls to athena. These runs of athena can be performed
+in parallel (use 'woftheta_xcorr.pl -p NPROC').
+
+
+----------
+7.1 Set-up
+----------
+
+To run the script, athena and venice have to be compiled (see Sect. 1). The
+path to these programs is determined automatically at the top of
+bin/woftheta_xcorr.pl. It is set to the directory 'bin' where
+'woftheta_xcorr.pl' is located.
+
+
+-----------
+7.2 Running
+-----------
+
+When running woftheta_xcorr.pl without the flag "-n", files from a previous run
+are deleted on query. If a file is not deleted, the corresponding task will
+read this file instead of redo the calculation. This can be time-saving, e.g.
+when one decides to increase the size of the random catalogue, the data-data
+correlations do not have to be recalculated.  Use the flag '-p NPROC' to run
+the angular correlation program ('athena') in parallel with NPROC processes.
+
+
+---------------
+7.2 Config file
+---------------
+
+A configuration file is read by the script. See test_w/config_woftheta for an
+example. All parameters for the tree code are set as well in this config file.
+
+
+---------------
+7.3 Input files
+---------------
+
+The input catalogue names have to be of the form
+
+"path/data<i>"
+
+where {i} is a list of indices specifying the catalogues. These can be
+integers, names, redshift ranges, etc. The variables "path" and "data", and the
+list of redshifts are read from the config file.
+
+The input file format has to be ascii (fits is supported in athena, but not yet
+in woftheta_xcorr.pl).
+The columns of the position x, y, and (optional) a jackknife sample number
+(integer) are specified in the config file. The coordinates are either
+spherical [rad] or Cartesian [arcsec]. If the jackknife sample number is not
+given and error = "jackknife", the code automatically creates jackknife samples
+by dividing the data area into Nx times Ny squares. The closest integer number
+Nx * Ny to nresample is chosen.
+
+The input catalogues may contain comment lines, starting with "#".
+
+The mask file (optional) has to be a ds9 region file containing polygons
+indicating the masked (unused) region.
+
+
+----------------
+7.4 Output files
+----------------
+
+Apart from a number of log files, woftheta_xcorr.pl produces the following main
+output files:
+
+w.DiDj, w.DjR, w.DpjR, w.RR	Binned number of pairs for data-data, data-random,
+	       			  random-random. The first is obtained for all
+				  redshift combinations i<=j. The files also contain
+				  the resampled pairs. In case of two input
+				  catalogues (config_woftheta:catbase2), the w.DpjR are
+			          the pairs of data2-random1.
+w_theta_i_j_{LS|Ham}.dat	Binned angular correlation function for the Landy-
+				  Szalay/Hamilton estimators, with Poisson and
+				  resampled errors.
+cov_i_j_{LS|Ham}.dat		Resample covariance for the Landy-Szalay/Hamilton
+				  estimators.
+
+With option '-r':
+w_theta_i_j_resample_{LS|Ham}.dat
+				All resampled correlation functions. 
+
+
+There is no double counting of identical pairs if the two catalogues are the
+same, i.e. for w.DiDi and w.RR. These files contain therefore half the number
+of total pairs. Note that two identical files with different file names are
+treated as two different catalogues, and therefore, each pair is counted twice.
+This might lead to unexpected results.
+
+
+==============
+8. Projections
+==============
+
+The scripts 'bin/cat2gal.pl' and bin/center_gal.pl' can be used to project an
+input catalogue from spherical to Cartesian coordinates, and to produce an
+output catalogue which is in athena-input format. Two projections are
+implemented:
+
+1. Gnomonic or 'tan' (recommended):
+   This projection is described in Calabretta&Greisen (2002). It is a zenithal
+   perspective projection of the sphere onto a plane using the sphere's center
+   as reference point. Great circles are transformed into straight lines.
+
+2.'cos(delta_c)'
+   The spherical coordinates ra and dec (alpha, delta) are projected to (x, y)
+   as:
+      x = alpha * cos(delta_c)
+      y = delta
+   where delta_c is the barycenter of the galaxy input catalogue.
+
+Note that only the position coordinates are projected, not the ellipticities for
+a lensing catalogue.
+
+
+============================================================
+9. Convergence power spectrum and smooth 2nd-order functions
+============================================================
+
+The python script
+
+bin/pallas.py
+
+computes various shear second-order functions as integrals over the shear
+two-point correlation function. These are given in Schneider, van Waerbeke,
+Kilbinger & Mellier (2002), A&A 396, 1 (SvWKM02)
+
+- Convergence band power spectrum, SvWKM02 (49).
+- Convergence power spectrum (biased estimator if the 2PCF is given on a
+  finite angular interval), SvWKM02 (45).
+- Aperture-mass dispersion for the Gaussian and polynomial filter, SvWKM02 (16).
+
+Type 'pallas.py -h' for help. Python version 3.x is required.
+
+The name 'pallas' stands for 'Power-spectrum for kAppa of eLL bAnd eStimator'.
+(In greek mythology, Pallas was Athena's companion, and was accidentally killed
+by her.)
+
+
+====================
+10. Testing the code
+====================
+
+The directories 'test_xi', 'test_w' and 'test_g' contain sample configuration
+files and test data. The test data files have to be downloaded as a separate
+tar ball from the athena page. Run 'athena' in 'test_xi' and 'test_g', and
+'woftheta_xcorr.pl' in 'test_w'. The outcome can be checked by comparing with
+the files in the subdirectories 'results'.
+
+The script
+
+bin/test_suite_athena.py
+
+runs all predefined tests autoamtically and writes the results into a text file.
+
+
+==============
+11. Known bugs
+==============
+
+* If the input catalogue contains non-numerical/non-ascii signs the tree code
+  will most probably die with a segmentation fault.
+* Very large catalogues causes memory allocation to fail during the tree
+  construction phase.
+* For the angular cross-correlation between two catalogues (config_woftheta:catbase2),
+  if two random catalogues are used (config_woftheta:random2), projection onto Cartesian
+  coordinates can introduce unwanted correlations. This is because each random
+  catalogue is projected to the centre of the associated data catalogue, which can
+  be slightly different. To avoid this, we recommend to either not project but use
+  spherical coordinates (config_woftheta:project=none), or to provide properly
+  projected catalogues and not let woftheta_xcorr.pl perform the correlation.
+* Constructing the tree for nodes at large absolute declination, near the poles,
+  can be significantly slower than for low-delta nodes, since the node-splitting does
+  not (yet) account for spherical coordinates, making it inefficient but most likely
+  not biased.
+
+
+===================
+12. Acknowledgments
+===================
+
+We thank Mike Jarvis and Jan Hartlap for sharing their respective tree codes,
+and Pablo Fosalba, Eric Jullo, Barnaby Rowe, Peter Schneider, and Lorne
+Whiteway for valuable discussions. Jonathan Benjamin is thanked for his
+thorough testing, bug-hunting and documenting the flaws and features of athena.
+His findings have been encorporated in versions >= 1.3 of athena. H.J.
+McCracken is thanked for sharing the idea of fast bootstrap calculations. We
+thank L. Miller for clarifications concerning angles on spheres. We thank
+Matthieu Béthermin, Ami Choi, Jörg Dietrich, and Oliver Friedrich for pointing
+out various bugs in the code.
+
+
+===========
+13. Contact
+===========
+
+Questions, feedback, criticism, bug reports, suggestions, actually anything
+related to the code is very welcome at martin.kilbinger@cea.fr .
+

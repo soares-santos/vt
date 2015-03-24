@@ -1,0 +1,36 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/fsobreira/athena/athena_1.7/src/venice.c
+venice.h
+/home/fsobreira/athena/athena_1.7/src/venice.h
+
+/home/fsobreira/athena/athena_1.7/src/venice.h
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+time.h
+-
+sys/times.h
+-
+gsl/gsl_matrix.h
+-
+gsl/gsl_math.h
+-
+gsl/gsl_rng.h
+-
+gsl/gsl_randist.h
+-
+gsl/gsl_histogram.h
+-
+gsl/gsl_histogram2d.h
+-
+

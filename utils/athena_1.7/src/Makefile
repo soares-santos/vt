@@ -1,0 +1,76 @@
+# Makefile for tree code 'athena'
+# Martin Kilbinger 2008-2013
+
+
+CC       = gcc-4.9
+cflags   = -Wall -Wuninitialized -pedantic -DNO_FILE_MSG
+cflags += -std=c99
+
+# Optimisation
+cflags  += -O3
+
+# Debugging
+#cflags += -ggdb3
+
+
+#CC      = icc
+#cflags  = -Wall -Wuninitialized  -DNO_FILE_MSG -std=c99 -wd188 -wd344 -wd869 -wd981 -wd1572
+#cflags += -g
+#cflags += -O3
+# icc Warnings disabled:
+# 188: enumerated type mixed with another type 
+# 344: typedef name has already been declared (with same type)
+# 869: parameter "nh" was never referenced
+# 981: operands are evaluated in unspecified order
+# 1572: floating-point equality and inequality comparisons are unreliable
+
+source = athena
+#objs  := $(patsubst %.c,%.o,$(wildcard *.c))
+objs   = 2pcf.o config.o gal_cat.o kdtree.o mathstuff.o errorlist.o io.o nrcomplex.o
+
+DD     = $(source)-`date +"%Y%m%d"`.tgz
+
+# GSL needed for bckw_eng_random and venice
+GSL    =  /usr/local/Cellar/gsl114/1.14
+
+# Fits support: optional
+# lflagsfits = 
+# cflagsfits =
+FITS       =  /usr/local/Cellar/cfitsio/3.370
+LIBFITS    = -lcfitsio
+cflagsfits = -I$(FITS)/include -D_WITH_FITS=1
+lflagsfits = -L$(FITS)/lib $(LIBFITS)
+
+lflags    = -lm
+lflagsgsl = $(lflags) -L$(GSL) -lgsl -lgslcblas
+
+all: athena venice
+
+$(source): $(objs) main.o
+	$(CC) $(cflags) -o $(source) $(objs) main.o $(lflags) $(lflagsfits)
+
+venice: venice.o
+	$(CC) $(cflags) -o $@ venice.o $(lflagsgsl)
+
+venice.o: venice.c
+	$(CC) -c -o $@ venice.c -I$(GSL)/include
+
+bckw_eng_random: $(objs) bckw_eng_random.o
+	$(CC) $(cflags) -o $@ $(objs) bckw_eng_random.o $(lflagsgsl)
+
+bckw_eng_random.o: bckw_eng_random.c
+	$(CC) -c $(cflags) -o $@ bckw_eng_random.c -I$(GSL)/include
+
+%.o:	%.c %.h
+	$(CC) $< -c $(cflags) -o $@ $(cflagsfits)
+
+.h:
+
+
+PHONY: clean backup
+
+clean:
+	rm -rf *~ *.o athena venice
+
+tar:
+	tar czhf $(source).tgz *.c *.h Makefile

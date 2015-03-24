@@ -1,0 +1,17 @@
+### -*- sh -*- ###
+### Config file for tree code 'athena'
+
+GALCAT1	        cat_0.7_1.0		# Background catalogue
+GALCAT2         cat_0.4_0.5 		# Foreground catalogue
+WCORR		2			# 1: shear-shear, 2: shear-position, 4: position-position
+SFORMAT		hamana			# One of standard, hamana, position
+SCOORD_INPUT	arcsec			# Input catalogue coordinates, {arcsec|arcmin|rad|deg}
+SCOORD_OUTPUT	arcmin			# Output coordinates
+THMIN           0.02			# Smallest scale  in units of 'SCOORD_OUTPUT' 
+THMAX           45	  		# Largest scale in units of 'SCOORD_OUTPUT'
+NTH             15			# Number of bins
+BINTYPE         LOG			# LIN or LOG
+RADEC           0			# 0: Cartesian, 1: spherical coordinates
+OATH		0.05			# Open angle threshold [rad]
+SERROR	        jackknife		# Error type ('none', 'bootstrap', 'jackknife')
+NRESAMPLE	50 50			# Number of resampled samples

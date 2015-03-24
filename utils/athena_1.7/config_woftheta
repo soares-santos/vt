@@ -1,0 +1,65 @@
+### -*- sh -*- ###
+### Config file for woftheta_xcorr.pl ###
+### athena version 1.7 ###
+
+
+#########################
+### Catalogue section ###
+#########################
+
+# File names
+
+path	      = .			# Path for data catalogues and all output files
+
+catbase       = data			# Catalogue base name. The data file names have to be "data<i>" for a
+					#  list of N specifiers {i} (see flag 'specifiers' below)
+catbase2      = - 			# Base name of second set of catalogues ("-" for only one catalogue set
+
+path_ran      = .			# Path for random catalogue
+rand	      = random		        # Random catalogue
+rand2	      = -
+
+nrand	      = 100000		        # Number of random objects
+nrand2	      = -			# Number of random objects for second catalogue set. Set to "-" if only one catalogue set.
+					# If "-" in case of two catalogues: will be set to nrand.
+
+mask	      = -			# Mask file ("-" if none)
+
+
+# Format of original catalogue
+coord_type    = radec 		        # Input coordinate type: "radec" (spherical coordinate)
+					#   or "xy" (Cartesian)
+coord_units   = deg			# Input coordinate units: "deg", "rad", "arcsec" or "arcmin"
+project       = tan	         	# If not "none", performs projection from spherical to 
+					#   Cartesian coordinates.
+					#   Options: "none", "cosdelta_c", "tan"
+
+c_x	      = 0			# Column of x/ra coordinate
+c_y	      = 1			# Column of y/dec coordinate
+
+#c_jk          = 2                       # Column of Jackknife sample number (integer); optional. If not present and nresample>0,
+					# the code automatically creates Jackknife resamples from the catalogue
+
+# Catalogue specifiers
+specifiers    = _0.4_0.6 _0.6_0.8	# List of specifiers. These can be integers, names, redshifts, ...
+					#  Use empty list for single catalogue
+
+#########################
+### Tree code section ###
+#########################
+
+# Tree code parameters (for tree code config file). The missing
+# parameters are determined automatically.
+
+coord_output  = arcmin			# "rad", "deg", "arcsec" or "arcmin"
+thmin         = 0.02			# Minimum angular scale [in units of 'coord_output]
+thmax         = 30			# Maximum angular scale [in units of 'coord_output]
+
+nth	      = 20			# Number of bins
+bintype	      = LOG			# LIN or LOG
+oath	      = 0.03			# Open angle [rad]
+error         = jackknife		# 'none', 'bootstrap' or 'jackknife'
+nresample     = 50			# Number of bootstrap of jackknife samples
+
+
+########################
