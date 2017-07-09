@@ -12,7 +12,7 @@ and the vt code will be installed there. If omitted, the
 
 After installing, setup the environment for your vt runs
 with the command:
-source <target-directory>/vt/setup-vt.sh 
+source <target-directory>/vt/run/setup-vt.sh 
 
 Options:
 -h    Print this help.

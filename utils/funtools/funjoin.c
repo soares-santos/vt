@@ -6,6 +6,8 @@
  *     funjoin -j key t1.fits t2.fits t3.fits foo.fits
  */
 
+/* patched to handle longlong columns */
+
 #include <math.h>
 #include <funtoolsP.h>
 #include <word.h>
@@ -25,12 +27,15 @@
 #define feq(x,y) (fabs((double)x-(double)y)<=(double)1.0E-15)
 #endif
 
+#define llfeq(x,y) ((longlong)x==(longlong)y)
+
 #define MAXIFILE  32
 #define MAXOFILE   1
 #define MAXROW  8192
 
 #define KEY_STRING   1
 #define KEY_NUMERIC  2
+#define KEY_LONGLONG 4
 
 #define JFILES_COL "JFILES"
 
@@ -68,6 +73,7 @@ typedef struct _filerec{
   double dval;
   double mval;
   char *sval;
+  longlong lval;
   int ibase;
   GIO igio;
   int irow;
@@ -365,6 +371,7 @@ JoinGetMatches(ifiles, nfile, ktype, tol, matches)
   int ibase=-1;
   char *sval=NULL;
   double dval=0.0;
+  longlong lval=0;
 
   /* no matches yet */
   memset(matches, 0, nfile);
@@ -431,6 +438,28 @@ JoinGetMatches(ifiles, nfile, ktype, tol, matches)
       }
     }
     break;
+  case KEY_LONGLONG:
+    /* get base */
+    for(i=0; i<nfile; i++){
+      if( ifiles[i].eof ) continue;
+      /* smallest value is base */
+      if( ifiles[i].lval < ifiles[ibase].lval ){
+	ibase = i;
+      }
+    }
+    /* this is the smallest value */
+    lval = ifiles[ibase].lval;
+    FunInfoGet(ifiles[ibase].fun, FUN_ROW, &ifiles[ibase].irow, 0);
+    /* look for matches in all valid files */
+    for(i=0; i<nfile; i++){
+      if( ifiles[i].eof ) continue;
+      /* "exact" match */
+      if( llfeq(ifiles[i].lval,lval) ){
+	matches[m++] = i;
+	ifiles[i].irow = -1;
+      }
+    }
+    break;
   }
   if( ibase >=0 ) ifiles[ibase].ibase = 1;
   return m;
@@ -479,6 +508,7 @@ JoinGatherRows(ifiles, nfile, ktype, tol, matches, nmatch, resetflag)
   char *sval=NULL;
   double dval;
   double mval;
+  longlong lval;
 
   /* no need to reset rows yet */
   *resetflag = -1;
@@ -530,6 +560,17 @@ JoinGatherRows(ifiles, nfile, ktype, tol, matches, nmatch, resetflag)
 	    *resetflag = ibase;
 	  }
 	  break;
+    case KEY_LONGLONG:
+      lval = ifiles[i].lval;
+      while( JoinReadNext(ifiles, nfile, i) ){
+	if( llfeq(ifiles[i].lval,lval) ){
+	  JoinAddIndex(&ifiles[i], ifiles[i].idx);
+	}
+	else{
+	  break;
+	}
+      }
+      break;
 	}
       }
     }
@@ -912,7 +953,6 @@ main(argc, argv)
     case 'B':
     case 'I':
     case 'J':
-    case 'K':
     case 'U':
     case 'V':
     case 'L':
@@ -943,6 +983,14 @@ main(argc, argv)
       ifiles[i].sval = xcalloc(ifiles[i].jn+1, sizeof(char));
       ktype |= KEY_STRING;
       break;
+    case 'K':
+      FunColumnSelect(ifiles[i].fun, sizeof(XFileRec), NULL,
+		      "n",             "J", "r", FUN_OFFSET(XFile, idx),
+		      ifiles[i].jname, "K", "r", FUN_OFFSET(XFile, lval),
+		      NULL);
+      ifiles[i].dtype = 'K';
+      ktype |= KEY_LONGLONG;
+      break;
     default:
       gerror(stderr, "bad datatype for join column: %c\n", ifiles[i].jtype);
     }
@@ -952,6 +1000,12 @@ main(argc, argv)
   /* we don't allow mixing of string and numeric values */
   if( ktype == (KEY_STRING|KEY_NUMERIC) ){
     gerror(stderr, "can't mix string and numeric join columns\n");
+  }
+  if( ktype == (KEY_STRING|KEY_LONGLONG) ){
+    gerror(stderr, "can't mix string and longlong join columns\n");
+  }
+  if( ktype == (KEY_NUMERIC|KEY_LONGLONG) ){
+    gerror(stderr, "can't mix longlong and other type of join columns\n");
   }
 
   /* open output file */
