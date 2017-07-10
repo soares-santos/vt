@@ -9,11 +9,11 @@ Soares-Santos et al., ApJ 727, 45, 2011.
 
 DOWNLOAD
 
-	Latest development version:
-	git clone https://<UserName>@bitbucket.org/marcelle/vt.git
-	Older versions:
-	https://bitbucket.org/marcelle/vt/downloads/	
-	
+	Latest release:
+	https://github.com/soares-santos/vt/releases 
+	Current development version:
+	git clone git@github.com:soares-santos/vt.git
+		
 INSTALL
 
 	cd vt 
