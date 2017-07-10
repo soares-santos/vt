@@ -1,0 +1,118 @@
+##################################################################
+README file for afterburner.py code:
+This file contains instructions on how to run the afterburner code, 
+as well as descriptions of the outputs of the code.
+
+INSTRUCTIONS:
+
+Step 0) Set up correct python packages
+
+I modified the sklearn python package to be able to do Gaussian 
+Mixture Modeling with weighted data points. To have python use the 
+modified version, source the gmmsetups.sh file in this directory.
+
+Step 1) Provide input files
+
+The code takes three input files, and it is currently set up to look 
+in one directory for all three files. Specify this directory by editing 
+Line 19: indir='/input_directory/'
+
+The first file is the cluster catalog. Specify this file by editing 
+Line 20: clusterfile=indir+'cluster_file.fits'
+This should be a FITS file, and must at least contain the RA, DEC,
+and redshift of the cluster centers, and an ID number for each cluster. 
+
+The second file is the galaxy catalog. Specify this file by editing
+Line 21: galfile=indir+'galaxy_file.fits'
+This should be a FITS file, and should contain galaxy ID numbers, RA, DEC, 
+photometric redshift, redshift uncertainty, absolute magnitude, 
+observed magnitudes in g,r,i,z bands, and rest frame g-r colors.
+
+The third file is the observed color prediction file. Specify this file
+by editing Line 22: colorfile=indir+'color_file.txt'
+This should be a text file, and should contain redshift, g-r, r-i, i-z 
+colors, in this order. 
+
+
+Step 2) Specify output files
+
+This code produces two output files. It will save both output files in 
+the same directory. Specify this directory by editing
+Line 24: outdir='/output_directory/'
+
+The first output is the cluster file. Specify this file by editing
+Line 25: cluster_outifle=outdir+'cluster.fit'
+
+The second output is the members file. Specify this file by editing 
+Line 26: member_outfile=outdir+'member.fit'
+
+
+Step 3) Specify initial column names from input files
+
+The input columns needed to make the appropriate cuts are specified in
+Lines 40-54. Lines can be added or removed as needed for different cuts.
+
+Step 4) Specify appropriate cuts
+
+Cluster catalog cuts:
+
+zmin, zmax (Lines 57 and 58) are minimum and maximum redshifts 
+(typically zmin=0.1,zmax=1.0)
+
+ra1 is the minimum RA value, ra2 is max. RA value. These can be edited as 
+desired on Lines 60 and 61.
+dec1 is minimum RA value, dec2 is max. RA value. These can be edited as 
+desired on Lines 62 and 63.
+
+A cut in ngals can also be used for the cluster catalog. 
+
+The clustercut is defined in the w=np.where() statement on line 65, 
+implemented on the following line.
+
+Galaxy catalog cuts: 
+
+zmin,zmax,ra1,ra2,dec1,dec2 same as cluster cuts. 
+Note the different lines on which these are specified:
+zmin/zmax on lines 68/69
+ra1/ra2 on lines 71/72
+dec1/des2 on lines 73/74
+It is a good idea to make area/redshift range used for the galaxy file
+slightly larger than what is used for the clusters (typically +1 degree
+on each side in RA/DEC, +/- 0.05 to 0.1 in redshift). This prevents problems 
+arising due to edge effects. 
+
+A 'crazy color' cut is used for the galaxy catalog. This prevents 
+galaxies with poorly measured colors from causing misfitting 
+in the Gaussian Mixture Model step of the code. This color cut is 
+typically made at -1 < color < 4. This cut can be changed by editing
+Lines 77-78: crazy1=-1 	     crazy2=4
+
+A cut on absolute magnitude brighter than -19 is included to ensure the 
+parameters used in the HOD model are appropriate. Changing this would 
+require recalibration of the HOD parameters
+
+A cut on modest_class==1 is used to ensure only galaxies are included in the 
+analysis. This cut applies to DES data but may be different for other 
+data sets. 
+
+Cuts on mult_niter_model>0 and flags_gold==0 are used for DES data to select 
+only well measured galaxies. These cuts may differ for other data sets. 
+
+The galaxy cuts are specified in the w=np.where() statement on line 83,
+implemented on the following line
+
+
+Step 5) Specify final column names from input files after cuts
+
+All data columns needed to run the code are specified in Lines 93-114.
+For each new data file, edit the column names appropriately. 
+
+Lines 96-98 specify columns which may not be present in all catalogs.
+They are NGALS, lambda_r (an estimate of the cluster radius), and 
+maskfrac (a measure of what percentage of the cluster is masked). 
+These three lines can be commented out without needing to make any 
+changes to the code. 
+
+
+OUTPUTS:
+
