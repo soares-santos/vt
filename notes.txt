@@ -1,0 +1,7 @@
+
+
+# add module
+#git subtree add --prefix=python/memb-assign --squash  git@github.com:bwelch94/Memb-assign.git master
+
+# update module
+git subtree pull --prefix=python/memb-assign --squash  git@github.com:bwelch94/Memb-assign.git master
